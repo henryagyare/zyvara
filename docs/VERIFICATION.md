@@ -29,6 +29,10 @@ Commands used: TypeScript CLI, ESLint CLI, `tsx --test tests/integrity.test.ts`,
 
 Live Tiger Data verified: free `zyvara` service in AWS us-east-1, initial migration applied, four editorial challenges seeded, actual PostgreSQL query and all eight core tables verified. TLS uses the service CA with certificate and hostname verification enabled. Credentials and certificate settings are only in ignored `.env.local`.
 
-Not yet verified: Firebase Google authentication on the deployment domain, Firebase signed direct upload/storage IAM/CORS, Vercel deployment/custom domain, and multi-user testing against those live services. These require the fresh service credentials and hosting access. Existing adapter code and production build readiness are not proof of those integrations.
+Live Vercel deployment and custom domain verified: `https://zyvara.us` serves the application and four Tiger-backed challenges. `/api/health` and `/api/challenges` returned HTTP 200. Health deliberately reports `productionReady: false` until Firebase server configuration is complete. GitHub Actions passed on commit `5e87776`.
+
+Vercel deployment `dpl_EwecAuUX5dHUuc4eaydw4NNCveKn` uses project Build Command override `pnpm exec next build` (Turbopack). The webpack build passed locally and in CI but its hosted API failed before application startup in Vercel's bytecode loader; rebuilding with Turbopack restored the API. Local Windows and CI scripts retain their verified webpack commands.
+
+Firebase project `zyvara-3753d` and its web app are created, Google provider enabled, and deployment hostnames authorized. Not yet verified: Firebase Google authentication on the deployment domain, Firebase signed direct upload/storage IAM/CORS, and multi-user testing against those live services. Firebase Admin key creation awaits action-specific approval; Storage requires the user to create/link a billing account and upgrade to Blaze. Existing adapter code and environment configuration are not proof of those integrations.
 
 Operational follow-ups before a public pilot: unattended assessment queue, abandoned-upload cleanup, report review UI/contact/retention policy, account-level deletion, backup/restore procedures, and auditable reward reversals. Likes/comments and email-link sign-in are intentionally deferred.
