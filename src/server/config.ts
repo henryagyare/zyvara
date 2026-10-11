@@ -10,8 +10,13 @@ export function productionReady() {
   return !!(
     process.env.DATABASE_URL &&
     process.env.FIREBASE_PROJECT_ID &&
+    process.env.FIREBASE_CLIENT_EMAIL &&
+    process.env.FIREBASE_PRIVATE_KEY &&
     process.env.FIREBASE_STORAGE_BUCKET &&
-    process.env.AUTH_MODE !== "demo" &&
-    process.env.STORAGE_MODE !== "local"
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN &&
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID &&
+    process.env.AUTH_MODE === "firebase" &&
+    process.env.STORAGE_MODE === "firebase"
   );
 }
