@@ -1,6 +1,6 @@
 # Tiger Data integration boundary
 
-Tiger Data is the confirmed production PostgreSQL workstream. Teammate 3 owns provisioning, connection credentials/TLS, and service availability. Fullstack has supplied the schema, first migration, seed, transactions, API, and queries. No old Grenes credentials or data are reused.
+Tiger Data is the confirmed production PostgreSQL workstream. Teammate 3 created the account; the user authorized fullstack to provision the service. The free `zyvara` service is created in AWS us-east-1 and connected locally. Migration, seed, and eight-table verification passed on October 11, 2026. TLS certificate verification uses the Tiger service CA; no certificate checks are disabled. Fullstack has supplied the schema, first migration, seed, transactions, API, and queries. No old Grenes credentials or data are reused.
 
 1. Use a fresh PostgreSQL service and database for Zyvara. Put its connection string in `.env.local` as `DATABASE_URL` without sharing it in chat or commits. For hosted deployment, set it in Vercel's encrypted environment. Use the provider's TLS connection options; do not disable certificate verification. If a custom CA is needed, set `DATABASE_SSL_CA` with escaped newlines. Keep pool size bounded (`DATABASE_POOL_MAX`, default 5).
 2. Run `pnpm db:migrate`, then `pnpm db:seed`, then `pnpm db:verify`. Scripts load Next's local environment files and never print credential values. Apply migrations once as a release step, not per request.

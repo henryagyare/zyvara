@@ -27,6 +27,8 @@ Browser artifacts are generated under ignored `test-results/screenshots/`: `disc
 
 Commands used: TypeScript CLI, ESLint CLI, `tsx --test tests/integrity.test.ts`, `next build --webpack`, and Playwright. The Windows sandbox disallowed Turbopack junction creation and some build-directory operations; the completed production check used webpack outside that filesystem restriction. Source does not require a change of framework.
 
-Not yet verified: live Tiger Data connectivity/migrations, Firebase Google authentication on the deployment domain, Firebase signed direct upload/storage IAM/CORS, Vercel deployment/custom domain, and multi-user testing against those live services. These require the fresh service credentials and hosting access. Existing adapter code and production build readiness are not proof of those integrations.
+Live Tiger Data verified: free `zyvara` service in AWS us-east-1, initial migration applied, four editorial challenges seeded, actual PostgreSQL query and all eight core tables verified. TLS uses the service CA with certificate and hostname verification enabled. Credentials and certificate settings are only in ignored `.env.local`.
+
+Not yet verified: Firebase Google authentication on the deployment domain, Firebase signed direct upload/storage IAM/CORS, Vercel deployment/custom domain, and multi-user testing against those live services. These require the fresh service credentials and hosting access. Existing adapter code and production build readiness are not proof of those integrations.
 
 Operational follow-ups before a public pilot: unattended assessment queue, abandoned-upload cleanup, report review UI/contact/retention policy, account-level deletion, backup/restore procedures, and auditable reward reversals. Likes/comments and email-link sign-in are intentionally deferred.
