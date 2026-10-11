@@ -1,10 +1,10 @@
 # Remaining account setup
 
-The application and Tiger database are connected at https://zyvara.us. Gemini integration is implemented but the deployment stays in simulation until live configuration is supplied. Firebase sign-in and photo uploads still need server credentials and a provisioned bucket.
+The application and Tiger database are connected at https://zyvara.us. Private photos now use Tiger with `STORAGE_MODE=postgres`; no Firebase Storage or Blaze upgrade is needed. Firebase server credentials remain necessary for free Google sign-in.
 
-## 1. Enable Firebase photo storage
+## 1. Skip Firebase photo-storage billing
 
-Open https://console.firebase.google.com/u/0/project/zyvara-3753d/storage. Select Upgrade project, create/link your Cloud Billing account, and finish upgrading this project to Blaze. You must enter payment information and accept billing terms yourself. This is usage-based billing; review the charges shown in the console. Tell Codex when complete. Codex can then provision the default bucket, configure the private access rules and upload CORS, and test storage.
+Leave the Firebase project on Spark. Do not create a billing account or provision a Firebase Storage bucket for Zyvara. Compressed private photos use the existing Tiger database, bounded to 100 MiB of decoded media; full storage rejects new uploads.
 
 ## 2. Provide the Firebase server credential
 

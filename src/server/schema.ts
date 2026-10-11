@@ -11,6 +11,13 @@ import {
 import type { AssessmentResult } from "./assessment";
 const time = (name: string) =>
   timestamp(name, { withTimezone: true, mode: "date" });
+export const mediaObjects = pgTable("media_objects", {
+  key: text("key").primaryKey(),
+  encoded: text("encoded").notNull(),
+  bytes: integer("bytes").notNull(),
+  mime: text("mime").notNull(),
+  createdAt: time("created_at").notNull().defaultNow(),
+});
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
   subject: text("subject").notNull().unique(),

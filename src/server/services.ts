@@ -17,6 +17,7 @@ import {
   validatePhoto,
   deleteObject,
   uploadDestination,
+  databaseStorage,
 } from "./storage";
 import type { Member } from "./auth";
 type Transaction = Parameters<
@@ -173,6 +174,7 @@ export async function receiveLocalUpload(
   mime: string,
 ) {
   if (
+    !databaseStorage() &&
     process.env.STORAGE_MODE !== "local" &&
     (process.env.FIREBASE_STORAGE_BUCKET ||
       process.env.NODE_ENV === "production")
@@ -185,7 +187,8 @@ export async function receiveLocalUpload(
   await validatePhoto(bytes, mime);
   try {
     await putObject(upload.objectKey, bytes, mime);
-  } catch {
+  } catch (error) {
+    if (error instanceof AppError) throw error;
     throw new AppError(
       409,
       "This upload slot has already been used. Choose the photo again.",
@@ -205,7 +208,7 @@ export async function finalizeUpload(member: Member, id: string) {
       throw new AppError(409, "This photo cannot be reused.");
     let bytes: Buffer;
     try {
-      bytes = await readUploadObject(upload.objectKey);
+      bytes = await readUploadObject(upload.objectKey, tx);
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError(
@@ -215,7 +218,8 @@ export async function finalizeUpload(member: Member, id: string) {
     }
     const verified = await validatePhoto(bytes);
     const derivativeKey = `derivatives/${member.id}/${id}.webp`;
-    await putObject(derivativeKey, verified.derivative, "image/webp");
+    await putObject(derivativeKey, verified.derivative, "image/webp", tx);
+    if (databaseStorage()) await deleteObject(upload.objectKey, tx);
     await tx
       .update(s.uploads)
       .set({

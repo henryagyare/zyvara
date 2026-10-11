@@ -19,16 +19,18 @@ Without a service configuration or demo setup, browsing works with local seeded 
 
 ## Production configuration and deployment
 
-Use a fresh Tiger Data PostgreSQL database, fresh Firebase project with Google sign-in enabled, and a fresh private Firebase Storage bucket. Variable names are in `.env.example`; no credentials are included. Add values locally or to Vercel's environment settings.
+Use Tiger Data PostgreSQL for records and private photos, and a Firebase Spark project for free Google sign-in. No Firebase Storage bucket or Blaze billing upgrade is required. Variable names are in `.env.example`; no credentials are included.
 
 - Database: `DATABASE_URL`, optional `DATABASE_SSL_CA` and `DATABASE_POOL_MAX`. [Tiger handoff](docs/TIGER-DATA-HANDOFF.md).
-- Firebase server: `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_STORAGE_BUCKET`. Firebase credentials never enter client bundles. Service account needs auth verification and bucket access/signing privileges.
+- Firebase server: `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`. These support verified and revocation-checked sign-in sessions and never enter browser bundles.
 - Firebase browser: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`. These identify the Firebase web app, not administrative credentials. Add the deployed host to Firebase authorized domains.
-- Set `AUTH_MODE=firebase`, `STORAGE_MODE=firebase`, `ASSESSMENT_PROVIDER=mock`, `MOCK_SCENARIO=needs_more_evidence`, and `APP_ORIGIN=https://zyvara.us` (or the exact preview origin). Keep `DEMO_MODE` unset/false. `ADMIN_FIREBASE_UIDS` is an optional comma-separated server-only admin allowlist.
+- Set `AUTH_MODE=firebase`, `STORAGE_MODE=postgres`, and `ASSESSMENT_PROVIDER=mock` or `gemini` (with server-only key/model). Keep `DEMO_MODE` unset/false. `ADMIN_FIREBASE_UIDS` is an optional server-only admin allowlist.
 
-Run migrations and seed against the fresh database, verify it, then deploy to Vercel with framework Next.js and Node 22. Install `pnpm install --frozen-lockfile`, build `pnpm build`. Configure the custom domain after a preview passes. The application has a 60-second function budget and 25-second assessment timeout. Production requires `DATABASE_URL`; local PGlite is not a deployment fallback. Firebase direct uploads avoid Vercel's request body limits.
+Apply both migrations with `pnpm db:migrate`. The hosted Vercel project uses Build Command override `pnpm exec next build` (Turbopack); local Windows and CI retain webpack. The application has a 60-second function budget and 25-second assessment timeout. Production requires `DATABASE_URL`; local PGlite is not a deployment fallback.
 
-Apply `storage.rules` to deny client SDK access. Set bucket CORS using `storage.cors.json`, replacing/adding the exact preview origin. Originals are uploaded using 10-minute server-issued signed PUT URLs with generation preconditions; all retrieval uses `/api/media/:uploadId` after owner/publication checks. No permanent private download URLs are exposed. Cloud IAM must keep the bucket private. Finalization checks actual stored bytes, file signature/format, size and decoding; sanitized WebP derivatives remove metadata. Two photos may each be up to 10 MB. Pixel limit: 40 million. No animated images.
+With `STORAGE_MODE=postgres`, uploads pass through the authenticated app server. The browser shrinks files over 3 MiB to fit the hosting request limit. Server decoding validates type and pixels, strips metadata, and stores sanitized WebP copies only (1280-pixel longest edge, quality 75, maximum 1 MiB each). Finalization atomically replaces the staging copy with the final copy. `media_objects` holds encoded bytes, capped at 100 MiB of decoded media (approximately 133 MiB encoded plus database overhead). An advisory lock serializes quota accounting; new writes fail when full. No automatic paid upgrade occurs. Abandoned uploads still need organizer cleanup. This is small-prototype storage.
+
+All retrieval uses `/api/media/:uploadId` after ownership/publication checks, with no permanent private download URLs. The optional Firebase Storage adapter and rules remain available but inactive in PostgreSQL photo mode.
 
 `pnpm db:verify` and `/api/health` prove database access, not Firebase setup. Before launch, prove Google login on the deployment, direct upload/finalization, authorized media retrieval, cross-user isolation, and withdrawal. External credentials are required to verify these live integrations; merely having adapter code does not establish connectivity.
 

@@ -54,10 +54,12 @@ async function dispatch(request: NextRequest, context: Context) {
           ? "PostgreSQL"
           : "Local development PostgreSQL",
         storage:
-          process.env.FIREBASE_STORAGE_BUCKET &&
-          process.env.STORAGE_MODE !== "local"
-            ? "Firebase private storage"
-            : "Local development private storage",
+          process.env.STORAGE_MODE === "postgres"
+            ? "PostgreSQL private photos"
+            : process.env.FIREBASE_STORAGE_BUCKET &&
+                process.env.STORAGE_MODE !== "local"
+              ? "Firebase private storage"
+              : "Local development private storage",
       });
     if (method === "GET" && route === "session")
       return NextResponse.json({ member: await currentMember() });

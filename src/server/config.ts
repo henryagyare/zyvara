@@ -12,12 +12,13 @@ export function productionReady() {
     process.env.FIREBASE_PROJECT_ID &&
     process.env.FIREBASE_CLIENT_EMAIL &&
     process.env.FIREBASE_PRIVATE_KEY &&
-    process.env.FIREBASE_STORAGE_BUCKET &&
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
     process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN &&
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID &&
     process.env.AUTH_MODE === "firebase" &&
-    process.env.STORAGE_MODE === "firebase" &&
+    (process.env.STORAGE_MODE === "postgres" ||
+      (process.env.STORAGE_MODE === "firebase" &&
+        !!process.env.FIREBASE_STORAGE_BUCKET)) &&
     (process.env.ASSESSMENT_PROVIDER !== "gemini" ||
       (!!process.env.GEMINI_API_KEY?.trim() &&
         !!process.env.GEMINI_MODEL?.trim()))

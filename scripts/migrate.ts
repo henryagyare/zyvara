@@ -5,11 +5,16 @@ import { sql } from "drizzle-orm";
 async function main() {
   const db = await getDb();
   const migration = await readFile("drizzle/0001_initial.sql", "utf8");
+  const mediaMigration = await readFile(
+    "drizzle/0002_private_media.sql",
+    "utf8",
+  );
   await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(739182)`);
     await tx.execute(sql.raw(migration));
+    await tx.execute(sql.raw(mediaMigration));
   });
-  console.log("Migration 0001_initial applied successfully.");
+  console.log("Initial and private-media migrations applied successfully.");
 }
 main()
   .catch(() => {

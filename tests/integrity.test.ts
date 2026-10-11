@@ -12,7 +12,11 @@ import { seed } from "../src/server/seed";
 import * as schema from "../src/server/schema";
 import * as service from "../src/server/services";
 import { upsertMember, type Member } from "../src/server/auth";
-import { validatePhoto, MAX_PHOTO_BYTES } from "../src/server/storage";
+import {
+  validatePhoto,
+  MAX_PHOTO_BYTES,
+  putObject,
+} from "../src/server/storage";
 import { mockProvider, validateProviderResult } from "../src/server/assessment";
 import { challengeInput } from "../src/server/validation";
 import {
@@ -99,7 +103,7 @@ before(async () => {
   await mkdir(".data", { recursive: true });
   folder = await mkdtemp(path.resolve(".data", "test-"));
   process.env.LOCAL_DATA_DIR = folder;
-  process.env.STORAGE_MODE = "local";
+  process.env.STORAGE_MODE = process.env.TEST_STORAGE_MODE || "local";
   delete process.env.DATABASE_URL;
   await seed();
   alice = await upsertMember("test:alice", "Alice");
@@ -114,6 +118,63 @@ after(async () => {
   await closeDb();
   await rm(folder, { recursive: true, force: true });
 });
+test(
+  "database photo storage retains sanitized copies, removes staging bytes, and rejects oversized objects",
+  { skip: process.env.TEST_STORAGE_MODE !== "postgres" },
+  async () => {
+    const db = await getDb();
+    const slot = await service.allocateUpload(alice, "result", "image/png");
+    const annotated = await sharp(photo)
+      .withExif({ IFD0: { Artist: "Private author" } })
+      .png()
+      .toBuffer();
+    await service.receiveLocalUpload(alice, slot.id, annotated, "image/png");
+    const [staging] = await db
+      .select()
+      .from(schema.mediaObjects)
+      .where(eq(schema.mediaObjects.key, `originals/${alice.id}/${slot.id}`));
+    const metadata = await sharp(
+      Buffer.from(staging.encoded, "base64"),
+    ).metadata();
+    assert.equal(metadata.format, "webp");
+    assert.equal(metadata.exif, undefined);
+    await Promise.all([
+      service.finalizeUpload(alice, slot.id),
+      service.finalizeUpload(alice, slot.id),
+    ]);
+    assert.equal(
+      (
+        await db
+          .select()
+          .from(schema.mediaObjects)
+          .where(eq(schema.mediaObjects.key, staging.key))
+      ).length,
+      0,
+    );
+    assert.equal(
+      (
+        await db
+          .select()
+          .from(schema.mediaObjects)
+          .where(
+            eq(
+              schema.mediaObjects.key,
+              `derivatives/${alice.id}/${slot.id}.webp`,
+            ),
+          )
+      ).length,
+      1,
+    );
+    await assert.rejects(
+      putObject(
+        `derivatives/${alice.id}/oversized.webp`,
+        Buffer.alloc(1024 * 1024 + 1),
+        "image/webp",
+      ),
+    );
+    await assert.rejects(putObject("../../outside", photo, "image/png"));
+  },
+);
 async function challenge(title = "Test action") {
   return service.createChallenge(alice, {
     title,

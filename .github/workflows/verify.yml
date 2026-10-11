@@ -16,4 +16,6 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+        env:
+          TEST_STORAGE_MODE: postgres
       - run: pnpm build

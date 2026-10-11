@@ -5,6 +5,14 @@ import sharp from "sharp";
 import { bucket } from "./firebase";
 import { dataDir } from "./config";
 import { AppError } from "./errors";
+import { eq, sql } from "drizzle-orm";
+import { getDb } from "./db";
+import { mediaObjects } from "./schema";
+type StorageDb = Pick<
+  Awaited<ReturnType<typeof getDb>>,
+  "select" | "insert" | "delete" | "execute"
+>;
+export const databaseStorage = () => process.env.STORAGE_MODE === "postgres";
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 const local = () =>
   process.env.STORAGE_MODE === "local" ||
@@ -15,7 +23,46 @@ function safePath(key: string) {
     throw new Error("Invalid object key");
   return path.join(dataDir(), "media", key);
 }
-export async function putObject(key: string, bytes: Buffer, mime: string) {
+export async function putObject(
+  key: string,
+  bytes: Buffer,
+  mime: string,
+  transaction?: StorageDb,
+) {
+  safePath(key);
+  if (databaseStorage()) {
+    // Store sanitized copies only; raw originals never enter the database.
+    const sanitized = key.startsWith("originals/")
+      ? (await validatePhoto(bytes, mime)).derivative
+      : bytes;
+    if (sanitized.length > 1024 * 1024)
+      throw new AppError(
+        413,
+        "This photo is too detailed. Choose a smaller photo.",
+      );
+    const save = async (tx: StorageDb) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(739183)`);
+      const [usage] = await tx
+        .select({ total: sql<number>`coalesce(sum(${mediaObjects.bytes}), 0)` })
+        .from(mediaObjects);
+      if (Number(usage.total) + sanitized.length > 100 * 1024 * 1024)
+        throw new AppError(
+          507,
+          "Photo storage is full. Contact the organizer before uploading more photos.",
+        );
+      await tx
+        .insert(mediaObjects)
+        .values({
+          key,
+          encoded: sanitized.toString("base64"),
+          bytes: sanitized.length,
+          mime: "image/webp",
+        });
+    };
+    if (transaction) await save(transaction);
+    else await (await getDb()).transaction(save);
+    return;
+  }
   if (local()) {
     const file = safePath(key);
     await mkdir(path.dirname(file), { recursive: true });
@@ -30,12 +77,22 @@ export async function putObject(key: string, bytes: Buffer, mime: string) {
         metadata: { cacheControl: "private, no-store" },
       });
 }
-export async function readObject(key: string) {
+export async function readObject(key: string, transaction?: StorageDb) {
+  safePath(key);
+  if (databaseStorage()) {
+    const [row] = await (transaction || (await getDb()))
+      .select()
+      .from(mediaObjects)
+      .where(eq(mediaObjects.key, key));
+    if (!row) throw new AppError(404, "Stored photo is unavailable.");
+    return Buffer.from(row.encoded, "base64");
+  }
   if (local()) return readFile(safePath(key));
   const [bytes] = await bucket().file(key).download();
   return bytes;
 }
-export async function readUploadObject(key: string) {
+export async function readUploadObject(key: string, transaction?: StorageDb) {
+  if (databaseStorage()) return readObject(key, transaction);
   const size = local()
     ? (await stat(safePath(key))).size
     : Number((await bucket().file(key).getMetadata())[0].size);
@@ -43,12 +100,19 @@ export async function readUploadObject(key: string) {
     throw new AppError(400, "Choose a photo up to 10 MB.");
   return readObject(key);
 }
-export async function deleteObject(key: string) {
+export async function deleteObject(key: string, transaction?: StorageDb) {
+  safePath(key);
+  if (databaseStorage()) {
+    await (transaction || (await getDb()))
+      .delete(mediaObjects)
+      .where(eq(mediaObjects.key, key));
+    return;
+  }
   if (local()) await unlink(safePath(key)).catch(() => {});
   else await bucket().file(key).delete({ ignoreNotFound: true });
 }
 export async function uploadDestination(key: string, mime: string) {
-  if (local()) return null;
+  if (local() || databaseStorage()) return null;
   const [url] = await bucket()
     .file(key)
     .getSignedUrl({
@@ -99,12 +163,12 @@ export async function validatePhoto(bytes: Buffer, claimedType?: string) {
     })
       .rotate()
       .resize({
-        width: 1600,
-        height: 1600,
+        width: 1280,
+        height: 1280,
         fit: "inside",
         withoutEnlargement: true,
       })
-      .webp({ quality: 82 })
+      .webp({ quality: 75 })
       .toBuffer();
   } catch {
     throw new AppError(

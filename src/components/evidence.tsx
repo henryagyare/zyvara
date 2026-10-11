@@ -34,6 +34,30 @@ const emptyPhoto = (): Photo => ({
   uploadId: null,
   error: "",
 });
+async function uploadBytes(file: File): Promise<Blob> {
+  if (file.size <= 3 * 1024 * 1024) return file;
+  const image = await createImageBitmap(file);
+  try {
+    const scale = Math.min(1, 1280 / Math.max(image.width, image.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context)
+      throw new Error(
+        "This browser could not prepare your photo. Choose a smaller photo.",
+      );
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.8),
+    );
+    if (!blob || blob.size > 3 * 1024 * 1024)
+      throw new Error("Choose a smaller photo to upload.");
+    return blob;
+  } finally {
+    image.close();
+  }
+}
 async function uploadPhoto(
   photo: Photo,
   role: string,
@@ -41,21 +65,25 @@ async function uploadPhoto(
 ) {
   if (photo.uploadId) return photo.uploadId;
   if (!photo.file) throw new Error("Choose a result photo before submitting.");
+  const bytes = await uploadBytes(photo.file);
   const slot = await send<{
     id: string;
     url: string;
     direct: boolean;
     headers: Record<string, string>;
-  }>("uploads", { role, mime: photo.file.type });
+  }>("uploads", { role, mime: bytes.type });
   const response = await fetch(slot.url, {
     method: "PUT",
     headers: slot.headers,
-    body: photo.file,
+    body: bytes,
   });
-  if (!response.ok)
+  if (!response.ok) {
+    const failure = await response.json().catch(() => null);
     throw new Error(
-      "Photo upload failed. Your description and selections are retained. Try again.",
+      failure?.error ||
+        "Photo upload failed. Your description and selections are retained. Try again.",
     );
+  }
   await send("uploads/" + slot.id + "/finalize", {});
   onSaved(slot.id);
   return slot.id;

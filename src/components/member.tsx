@@ -464,11 +464,13 @@ export function Privacy() {
       </p>
       <h2>Private by default</h2>
       <p>
-        Evidence originals remain in private storage. The application serves
-        sanitized WebP copies after an access check. Public sharing requires
-        your consent and a supported result. Shared posts include your display
-        name, selected photos, description, challenge, and assessment status.
-        You can withdraw sharing from the assessment page at any time.
+        Evidence photos remain in private storage. With database photo storage,
+        only compressed copies are retained and original metadata is discarded.
+        The application serves sanitized WebP copies after an access check.
+        Public sharing requires your consent and a supported result. Shared
+        posts include your display name, selected photos, description,
+        challenge, and assessment status. You can withdraw sharing from the
+        assessment page at any time.
       </p>
       <h2>Photo assessments</h2>
       <p>
