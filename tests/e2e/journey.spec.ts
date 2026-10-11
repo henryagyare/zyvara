@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import sharp from "sharp";
 import fs from "node:fs/promises";
+import { randomBytes } from "node:crypto";
 test("desktop: sign in, create, submit, retry, reward, refresh, share, withdraw, delete", async ({
   page,
   request,
@@ -42,11 +43,19 @@ test("desktop: sign in, create, submit, retry, reward, refresh, share, withdraw,
   ).toBeVisible();
   const challengePath = new URL(page.url()).pathname;
   await page.getByRole("link", { name: "Take this challenge" }).click();
-  const photo = await sharp({
-    create: { width: 480, height: 320, channels: 3, background: "#dceaa5" },
+  const photo = await sharp(randomBytes(1200 * 1000 * 3), {
+    raw: { width: 1200, height: 1000, channels: 3 },
   })
     .png()
     .toBuffer();
+  expect(photo.length).toBeGreaterThan(3 * 1024 * 1024);
+  let uploadedPhoto = false;
+  page.on("request", (req) => {
+    if (req.method() === "PUT" && req.url().endsWith("/file")) {
+      uploadedPhoto = true;
+      expect(req.headers()["content-type"]).toBe("image/jpeg");
+    }
+  });
   await page.getByLabel("Result photo (required)").setInputFiles({
     name: "cleanup.png",
     mimeType: "image/png",
@@ -65,6 +74,7 @@ test("desktop: sign in, create, submit, retry, reward, refresh, share, withdraw,
   await expect(
     page.getByRole("heading", { name: "No points were awarded" }),
   ).toBeVisible();
+  expect(uploadedPhoto).toBe(true);
   const assessmentPath = new URL(page.url()).pathname;
   await page.waitForTimeout(2200);
   await page
@@ -82,6 +92,11 @@ test("desktop: sign in, create, submit, retry, reward, refresh, share, withdraw,
   const resultSrc = await page
     .getByRole("img", { name: "Your submitted result" })
     .getAttribute("src");
+  const savedPhoto = await page.request.get(resultSrc!);
+  expect(savedPhoto.status()).toBe(200);
+  const savedBytes = await savedPhoto.body();
+  expect(savedBytes.length).toBeLessThan(1024 * 1024);
+  expect((await sharp(savedBytes).metadata()).format).toBe("webp");
   const privateMedia = await request.get(resultSrc!);
   expect(privateMedia.status()).toBe(404);
   await page

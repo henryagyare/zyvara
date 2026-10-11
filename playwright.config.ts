@@ -21,7 +21,7 @@ export default defineConfig({
       DATABASE_URL: "",
       AUTH_MODE: "demo",
       DEMO_ACCESS_CODE: "local-zyvara-demo",
-      STORAGE_MODE: "local",
+      STORAGE_MODE: process.env.TEST_STORAGE_MODE || "local",
       LOCAL_DATA_DIR: ".data/e2e",
       APP_ORIGIN: "http://127.0.0.1:3100",
       NEXT_DIST_DIR: ".next-e2e",
