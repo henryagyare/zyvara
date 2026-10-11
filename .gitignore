@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.next-e2e/
+.env*
+!.env.example
+.data/
+test-results/
+playwright-report/
+*.tsbuildinfo
+.vercel/
+.pnpm-store/

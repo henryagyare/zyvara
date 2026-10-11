@@ -1,0 +1,8 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Uploads use short-lived, server-issued signed URLs bound to owner records.
+    // All reads and derivatives pass through the authorized application API.
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}

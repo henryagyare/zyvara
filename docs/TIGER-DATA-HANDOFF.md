@@ -1,0 +1,16 @@
+# Tiger Data integration boundary
+
+Tiger Data is the confirmed production PostgreSQL workstream. Teammate 3 owns provisioning, connection credentials/TLS, and service availability. Fullstack has supplied the schema, first migration, seed, transactions, API, and queries. No old Grenes credentials or data are reused.
+
+1. Use a fresh PostgreSQL service and database for Zyvara. Put its connection string in `.env.local` as `DATABASE_URL` without sharing it in chat or commits. For hosted deployment, set it in Vercel's encrypted environment. Use the provider's TLS connection options; do not disable certificate verification. If a custom CA is needed, set `DATABASE_SSL_CA` with escaped newlines. Keep pool size bounded (`DATABASE_POOL_MAX`, default 5).
+2. Run `pnpm db:migrate`, then `pnpm db:seed`, then `pnpm db:verify`. Scripts load Next's local environment files and never print credential values. Apply migrations once as a release step, not per request.
+3. Restart the web application after configuring the environment. `GET /api/health` checks an actual query; `GET /api/config` identifies the configured adapter but is not proof of connectivity. `db:verify` checks all eight core tables. Retain migration and seed output as service proof.
+4. Test two users, private media isolation, repeat assessment calls, and points reconciliation against the real service. The local tests use the same PostgreSQL tables and queries through PGlite; they do not prove Tiger connectivity.
+
+Source of truth: `src/server/schema.ts`, `drizzle/0001_initial.sql`, `src/server/services.ts`. Do not replace these tables in place or edit an applied migration. Add sequential migrations and coordinate adapter changes through this document. `getDb()` chooses the node-postgres adapter when `DATABASE_URL` is present; no application rewrites are needed.
+
+Core exported services: `discover`, `challengeDetail`, `createChallenge`, `closeChallenge`, `finalizeEvidence`, `processAssessment`, `contributionDetail`, `progress`, `share`, `community`, `deleteContribution`. All protected entry points receive a member resolved from verified server authentication. They do not trust request user IDs. Rewards have a unique contribution key, fixed 50-point amount, and an atomic assessment/reward transaction.
+
+Minimal rows retained after deletion preserve reward idempotency. Photos and narrative are removed, consent is withdrawn, and a contribution tombstone prevents a new award for the same user/challenge. Moderation hiding removes public access and records an admin action. A future reward reversal must be a new auditable migration/ledger operation; do not overwrite existing recognition.
+
+Local fallback: PGlite stores PostgreSQL files in `.data/postgres` on the server's disk and uses the exact same migration and Drizzle schema. It is single-process development only and fails closed in production when `DATABASE_URL` is missing. Never deploy it into an ephemeral or multi-instance hosting filesystem.

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Zyvara — Product & Design System</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="system.css">
+</head>
+<body>
+  <div class="studio" aria-label="Design preview controls">
+    <a class="studio-brand" href="#discover">ZYVARA <span>DESIGN STUDY / 1.0</span></a>
+    <label class="sr-only" for="screen-select">Choose a design screen</label>
+    <select id="screen-select"></select>
+    <div class="device-controls"><button id="desktop" class="selected" aria-pressed="true">Desktop</button><button id="mobile" aria-pressed="false">Mobile</button></div>
+    <a class="paper-link" href="https://app.paper.design/file/01M4MV3FTCQ38BK631JD95P74W" target="_blank" rel="noopener">Paper ↗</a>
+  </div>
+  <div id="stage" class="stage"><div id="app" class="app"></div></div>
+  <div id="overlay"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="prototype.js"></script>
+</body>
+</html>
