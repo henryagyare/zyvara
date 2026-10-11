@@ -507,6 +507,10 @@ body {
   letter-spacing: normal;
   line-height: 1.25rem;
 }
+.mission-art {
+  height: auto;
+  min-height: 220px;
+}
 .text-size-control {
   display: flex;
   align-items: center;
