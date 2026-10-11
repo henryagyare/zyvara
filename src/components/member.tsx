@@ -466,7 +466,10 @@ export function Privacy() {
       <p>
         Evidence photos remain in private storage. With database photo storage,
         only compressed copies are retained and original metadata is discarded.
-        The application serves sanitized WebP copies after an access check.
+        The application serves sanitized WebP copies after an access check. Your
+        challenge’s creator can review your latest submitted photos and
+        description after the AI assessment, and approve or deny the submission.
+        Their decision and reason are saved alongside the original AI feedback.
         Public sharing requires your consent and a supported result. Shared
         posts include your display name, selected photos, description,
         challenge, and assessment status. You can withdraw sharing from the

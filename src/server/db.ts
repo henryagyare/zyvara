@@ -49,6 +49,12 @@ export async function getDb(): Promise<DB> {
           "utf8",
         ),
       );
+      await client.exec(
+        await readFile(
+          path.join(process.cwd(), "drizzle/0003_creator_reviews.sql"),
+          "utf8",
+        ),
+      );
       return pgliteDrizzle(client, { schema }) as unknown as DB;
     })();
   return globalDB.zyvaraDB;

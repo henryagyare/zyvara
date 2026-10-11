@@ -261,6 +261,11 @@ export async function finalizeEvidence(member: Member, input: unknown) {
       .where(eq(s.challenges.id, value.challengeId));
     if (!challenge || challenge.hidden)
       throw new AppError(404, "This challenge is unavailable.");
+    if (challenge.creatorId === member.id)
+      throw new AppError(
+        403,
+        "Challenge creators cannot submit to their own challenges.",
+      );
     const acceptedAt = new Date();
     if (
       challenge.status !== "published" ||
@@ -363,7 +368,22 @@ export async function ownContribution(member: Member, id: string) {
   return row;
 }
 export async function contributionDetail(member: Member, id: string) {
-  const contribution = await ownContribution(member, id);
+  const dbAccess = await getDb();
+  const [access] = await dbAccess
+    .select({ contribution: s.contributions, challenge: s.challenges })
+    .from(s.contributions)
+    .innerJoin(s.challenges, eq(s.contributions.challengeId, s.challenges.id))
+    .where(eq(s.contributions.id, id));
+  if (
+    !access ||
+    access.contribution.deletedAt ||
+    ((access.contribution.hidden || access.challenge.hidden) &&
+      access.contribution.ownerId !== member.id) ||
+    (access.contribution.ownerId !== member.id &&
+      access.challenge.creatorId !== member.id)
+  )
+    throw new AppError(404, "Contribution not found.");
+  const contribution = access.contribution;
   const db = await getDb();
   const [version] = await db
     .select()
@@ -403,6 +423,13 @@ export async function contributionDetail(member: Member, id: string) {
       retryAt: job.retryAt,
       leaseUntil: job.leaseUntil,
     },
+    review:
+      (
+        await db
+          .select()
+          .from(s.creatorReviews)
+          .where(eq(s.creatorReviews.evidenceId, version.id))
+      )[0] || null,
     assessment: assessment?.result || null,
     points: reward?.amount || 0,
     challenge,
@@ -618,7 +645,7 @@ export async function progress(member: Member) {
         ...(await contributionDetail(member, row.contribution.id)),
       })),
     ),
-    rewardCount: ledger.length,
+    rewardCount: ledger.filter((r) => r.amount > 0).length,
   };
 }
 export async function share(member: Member, id: string, consent: boolean) {
@@ -720,7 +747,11 @@ export async function media(member: Member | null, uploadId: string) {
     row.contribution.consent &&
     row.contribution.outcome === "supported" &&
     row.evidence.version === row.contribution.latestVersion;
-  if (!owned && !publicAllowed) throw new AppError(404, "Photo unavailable.");
+  const creatorAllowed =
+    member?.id === row.challenge.creatorId &&
+    row.evidence.version === row.contribution.latestVersion;
+  if (!owned && !publicAllowed && !creatorAllowed)
+    throw new AppError(404, "Photo unavailable.");
   if (!row.upload.derivativeKey) throw new AppError(404, "Photo unavailable.");
   return readObject(row.upload.derivativeKey);
 }
@@ -819,4 +850,128 @@ export async function adminHide(
     });
   });
   return { hidden: true };
+}
+
+export async function creatorSubmissions(member: Member, challengeId: string) {
+  const db = await getDb();
+  const [challenge] = await db
+    .select()
+    .from(s.challenges)
+    .where(eq(s.challenges.id, challengeId));
+  if (!challenge || challenge.hidden || challenge.creatorId !== member.id)
+    throw new AppError(404, "Challenge unavailable.");
+  const rows = await db
+    .select()
+    .from(s.contributions)
+    .where(
+      and(
+        eq(s.contributions.challengeId, challengeId),
+        isNull(s.contributions.deletedAt),
+        eq(s.contributions.hidden, false),
+      ),
+    )
+    .orderBy(desc(s.contributions.createdAt));
+  const submissions = [];
+  for (const row of rows)
+    submissions.push(await contributionDetail(member, row.id));
+  return { submissions };
+}
+export async function reviewContribution(
+  member: Member,
+  id: string,
+  value: { evidenceId: string; decision: "approve" | "deny"; reason: string },
+) {
+  if (!value.reason.trim() || value.reason.length > 2000)
+    throw new AppError(400, "Give a review reason of 1–2,000 characters.");
+  const db = await getDb();
+  await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(s.contributions)
+      .where(eq(s.contributions.id, id))
+      .for("update");
+    if (!row || row.deletedAt || row.hidden)
+      throw new AppError(404, "Contribution unavailable.");
+    const [challenge] = await tx
+      .select()
+      .from(s.challenges)
+      .where(eq(s.challenges.id, row.challengeId));
+    if (
+      !challenge ||
+      challenge.hidden ||
+      challenge.creatorId !== member.id ||
+      row.ownerId === member.id
+    )
+      throw new AppError(
+        403,
+        "Only the challenge creator can review another member’s submission.",
+      );
+    const [version] = await tx
+      .select()
+      .from(s.evidence)
+      .where(
+        and(
+          eq(s.evidence.contributionId, id),
+          eq(s.evidence.version, row.latestVersion),
+        ),
+      );
+    if (!version || version.id !== value.evidenceId)
+      throw new AppError(409, "Evidence changed. Refresh before reviewing.");
+    const [job] = await tx
+      .select()
+      .from(s.jobs)
+      .where(eq(s.jobs.evidenceId, version.id));
+    const [assessment] = await tx
+      .select()
+      .from(s.assessments)
+      .where(eq(s.assessments.evidenceId, version.id))
+      .orderBy(desc(s.assessments.createdAt))
+      .limit(1);
+    if (job?.state !== "completed" || !assessment)
+      throw new AppError(409, "Wait for Gemini assessment before reviewing.");
+    const [existing] = await tx
+      .select()
+      .from(s.creatorReviews)
+      .where(eq(s.creatorReviews.evidenceId, version.id));
+    if (existing)
+      throw new AppError(
+        409,
+        "This evidence version has already been reviewed.",
+      );
+    await tx.insert(s.creatorReviews).values({
+      evidenceId: version.id,
+      reviewerId: member.id,
+      decision: value.decision,
+      reason: value.reason.trim(),
+    });
+    await tx
+      .update(s.contributions)
+      .set({
+        outcome: value.decision === "approve" ? "supported" : "not_supported",
+        ...(value.decision === "deny"
+          ? { consent: false, consentAt: null }
+          : {}),
+      })
+      .where(eq(s.contributions.id, id));
+    if (value.decision === "approve")
+      await tx
+        .insert(s.rewards)
+        .values({
+          id: randomUUID(),
+          contributionId: id,
+          ownerId: row.ownerId,
+          assessmentId: assessment.id,
+          amount: 50,
+        })
+        .onConflictDoUpdate({
+          target: s.rewards.contributionId,
+          set: { amount: 50, assessmentId: assessment.id },
+        });
+    else
+      await tx
+        .update(s.rewards)
+        .set({ amount: 0 })
+        .where(eq(s.rewards.contributionId, id));
+  });
+  return contributionDetail(member, id);
 }

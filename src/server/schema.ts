@@ -125,6 +125,17 @@ export const assessments = pgTable("assessments", {
   result: jsonb("result").$type<AssessmentResult>().notNull(),
   createdAt: time("created_at").notNull().defaultNow(),
 });
+export const creatorReviews = pgTable("creator_reviews", {
+  evidenceId: text("evidence_id")
+    .primaryKey()
+    .references(() => evidence.id),
+  reviewerId: text("reviewer_id")
+    .notNull()
+    .references(() => users.id),
+  decision: text("decision").notNull(),
+  reason: text("reason").notNull(),
+  createdAt: time("created_at").notNull().defaultNow(),
+});
 export const rewards = pgTable(
   "rewards",
   {

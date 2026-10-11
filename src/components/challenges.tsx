@@ -16,6 +16,7 @@ import {
   date,
   useResource,
 } from "./shared";
+import { CreatorReview } from "./review";
 import { MemberGate, useSession } from "./app";
 const categories = ["Cleanup", "Planting", "Recycling", "Conservation"];
 export function Discover() {
@@ -211,6 +212,7 @@ export function Details({ id }: { id: string }) {
               </div>
             ))}
           </section>
+          {member?.id === c.creatorId && <CreatorReview challengeId={id} />}
           <div className="feedback-note">
             Choose a safe, permitted location. Avoid identifiable people,
             private information, and hazardous materials in your photos.
@@ -243,7 +245,12 @@ export function Details({ id }: { id: string }) {
               <Clock size={16} style={{ display: "inline" }} />{" "}
               {c.deadline ? "Deadline: " + date(c.deadline) : "No deadline"}
             </p>
-            {closed ? (
+            {member?.id === c.creatorId ? (
+              <div className="feedback-note">
+                You created this challenge. Review submissions below; creators
+                cannot participate in their own challenges.
+              </div>
+            ) : closed ? (
               <div className="status warning">Closed for submissions</div>
             ) : (
               <Link className="btn full" href={"/evidence/" + id}>
@@ -360,10 +367,13 @@ function CreateForm() {
               maxLength={2000}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              aria-describedby="description-help"
+              aria-describedby="description-help description-count"
               aria-invalid={!!fields.description}
             />
           </Field>
+          <p id="description-count" className="helper">
+            {description.length} / 2,000 characters
+          </p>
           <div className="form-two">
             <Field name="category" label="Category" error={fields.category}>
               <select

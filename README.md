@@ -26,11 +26,11 @@ Use Tiger Data PostgreSQL for records and private photos, and a Firebase Spark p
 - Firebase browser: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`. These identify the Firebase web app, not administrative credentials. Add the deployed host to Firebase authorized domains.
 - Set `AUTH_MODE=firebase`, `STORAGE_MODE=postgres`, and `ASSESSMENT_PROVIDER=mock` or `gemini` (with server-only key/model). Keep `DEMO_MODE` unset/false. `ADMIN_FIREBASE_UIDS` is an optional server-only admin allowlist.
 
-Apply both migrations with `pnpm db:migrate`. The hosted Vercel project uses Build Command override `pnpm exec next build` (Turbopack); local Windows and CI retain webpack. The application has a 60-second function budget and 25-second assessment timeout. Production requires `DATABASE_URL`; local PGlite is not a deployment fallback.
+Apply all migrations with `pnpm db:migrate`. The hosted Vercel project uses Build Command override `pnpm exec next build` (Turbopack); local Windows and CI retain webpack. The application has a 60-second function budget and 25-second assessment timeout. Production requires `DATABASE_URL`; local PGlite is not a deployment fallback.
 
 With `STORAGE_MODE=postgres`, uploads pass through the authenticated app server. The browser shrinks files over 3 MiB to fit the hosting request limit. Server decoding validates type and pixels, strips metadata, and stores sanitized WebP copies only (1280-pixel longest edge, quality 75, maximum 1 MiB each). Finalization atomically replaces the staging copy with the final copy. `media_objects` holds encoded bytes, capped at 100 MiB of decoded media (approximately 133 MiB encoded plus database overhead). An advisory lock serializes quota accounting; new writes fail when full. No automatic paid upgrade occurs. Abandoned uploads still need organizer cleanup. This is small-prototype storage.
 
-All retrieval uses `/api/media/:uploadId` after ownership/publication checks, with no permanent private download URLs. The optional Firebase Storage adapter and rules remain available but inactive in PostgreSQL photo mode.
+All retrieval uses `/api/media/:uploadId` after ownership, challenge-creator review, or publication checks, with no permanent private download URLs. The optional Firebase Storage adapter and rules remain available but inactive in PostgreSQL photo mode.
 
 `pnpm db:verify` and `/api/health` prove database access, not Firebase setup. Before launch, prove Google login on the deployment, direct upload/finalization, authorized media retrieval, cross-user isolation, and withdrawal. External credentials are required to verify these live integrations; merely having adapter code does not establish connectivity.
 
@@ -60,8 +60,11 @@ pnpm test:e2e
 
 Assessment processing is awaited in a request. Pending/expired processing jobs are resumable when the owner returns; there is no unattended queue yet. Five attempts per evidence version and persisted request throttles bound retries. Configure a worker/queue before promising unattended completion. Rate limits behind a proxy assume trusted forwarding headers; production hosting must strip spoofed forwarding headers.
 
-Deletion stops app access first and removes the photo objects; failures of object cleanup require an organizer retry. Abandoned upload slots, failed derivative writes, report review, account-level deletion, backup/restore, retention duration and organizer contact are operational follow-ups before a public pilot. No likes, comments, or email-link sign-in are shipped. A hidden contribution keeps its recognition ledger; reward reversals require an auditable future operation.
+Deletion stops app access first and removes the photo objects; failures of object cleanup require an organizer retry. Abandoned upload slots, failed derivative writes, report review, account-level deletion, backup/restore, retention duration and organizer contact are operational follow-ups before a public pilot. No likes, comments, or email-link sign-in are shipped. A hidden contribution keeps its recognition ledger; creator denial records a review reason and reverses its award.
 
 GitHub Actions checks the source and build. Keep preview and production databases/buckets separate, use least-privilege credentials, and apply migrations before deployment. Roll back application code through Vercel's previous deployment; migration rollback requires an explicit database plan. No older Grenes code, data, configuration, or credentials were copied.
 
 Official references used: [Next route handlers](https://nextjs.org/docs/app/getting-started/route-handlers), [Firebase server session cookies](https://firebase.google.com/docs/auth/admin/manage-cookies), [Drizzle PGlite adapter](https://orm.drizzle.team/docs/connect-pglite), [PGlite persistent filesystems](https://pglite.dev/docs/filesystems).
+
+Creators cannot submit to their own challenges. On their challenge page, they can review the latest evidence after Gemini, record a reason, and approve or deny once per evidence version. Approval grants at most 50 points; denial removes points and sharing. Original AI feedback is retained. Description fields show live counts against the existing 2,000-character limit. The footer offers persistent Small, Default, and Large text sizes.
+

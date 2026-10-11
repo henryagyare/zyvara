@@ -134,6 +134,34 @@ async function dispatch(request: NextRequest, context: Context) {
       path.length === 3
     )
       return NextResponse.json(await service.closeChallenge(member, path[1]));
+    if (
+      method === "GET" &&
+      path[0] === "challenges" &&
+      path[2] === "submissions" &&
+      path.length === 3
+    )
+      return NextResponse.json(
+        await service.creatorSubmissions(member, path[1]),
+      );
+    if (
+      method === "POST" &&
+      path[0] === "contributions" &&
+      path[2] === "review" &&
+      path.length === 3
+    )
+      return NextResponse.json(
+        await service.reviewContribution(
+          member,
+          path[1],
+          z
+            .object({
+              evidenceId: z.string().uuid(),
+              decision: z.enum(["approve", "deny"]),
+              reason: z.string().trim().min(1).max(2000),
+            })
+            .parse(await json(request)),
+        ),
+      );
     if (method === "POST" && route === "uploads") {
       const body = z
         .object({

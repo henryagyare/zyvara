@@ -89,6 +89,12 @@ export type ContributionDetail = {
     retryAt: string | null;
     leaseUntil: string | null;
   };
+  review: {
+    evidenceId: string;
+    decision: "approve" | "deny";
+    reason: string;
+    createdAt: string;
+  } | null;
   assessment: Assessment | null;
   points: number;
   challenge: Challenge;

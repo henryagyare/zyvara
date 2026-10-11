@@ -42,6 +42,14 @@ test("desktop: sign in, create, submit, retry, reward, refresh, share, withdraw,
     page.getByRole("heading", { name: title, exact: true }),
   ).toBeVisible();
   const challengePath = new URL(page.url()).pathname;
+  await expect(
+    page.getByRole("link", { name: "Take this challenge" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await page.goto("/signin?returnTo=" + encodeURIComponent(challengePath));
+  await page.getByLabel("Demo profile name").fill(profile + " participant");
+  await page.getByLabel("Demo access code").fill("local-zyvara-demo");
+  await page.getByRole("button", { name: "Enter restricted demo" }).click();
   await page.getByRole("link", { name: "Take this challenge" }).click();
   const photo = await sharp(randomBytes(1200 * 1000 * 3), {
     raw: { width: 1200, height: 1000, channels: 3 },
@@ -149,7 +157,7 @@ test("desktop: sign in, create, submit, retry, reward, refresh, share, withdraw,
   });
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.goto("/signin?returnTo=/progress");
-  await page.getByLabel("Demo profile name").fill(profile);
+  await page.getByLabel("Demo profile name").fill(profile + " participant");
   await page.getByLabel("Demo access code").fill("local-zyvara-demo");
   await page.getByRole("button", { name: "Enter restricted demo" }).click();
   await expect(page.locator(".stat").first().locator("strong")).toHaveText(
@@ -170,6 +178,100 @@ test("desktop: sign in, create, submit, retry, reward, refresh, share, withdraw,
   expect((await request.get(resultSrc!)).status()).toBe(404);
   expect(problems).toEqual([]);
   expect(challengePath).toContain("/challenges/");
+});
+test("creator reviews insufficient evidence and text size persists", async ({
+  page,
+}) => {
+  const creator = "Review creator " + Date.now();
+  async function signIn(name: string, path: string) {
+    await page.goto("/signin?returnTo=" + encodeURIComponent(path));
+    await page.getByLabel("Demo profile name").fill(name);
+    await page.getByLabel("Demo access code").fill("local-zyvara-demo");
+    await page.getByRole("button", { name: "Enter restricted demo" }).click();
+    await expect(page).toHaveURL(new RegExp(path + "$"));
+  }
+  await signIn(creator, "/create");
+  await page.getByLabel("Challenge title").fill("Creator review " + Date.now());
+  await page.getByLabel("Describe the mission").fill("Plant a tree safely.");
+  await expect(
+    page.getByText("20 / 2,000 characters", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Evidence requirements").fill("Show the planted tree.");
+  await page.getByRole("button", { name: "Publish challenge" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review submissions" }),
+  ).toBeVisible();
+  const challengePath = new URL(page.url()).pathname;
+  await expect(
+    page.getByRole("link", { name: "Take this challenge" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await signIn(creator + " member", challengePath);
+  await page.getByRole("link", { name: "Take this challenge" }).click();
+  await page.getByLabel("Result photo (required)").setInputFiles({
+    name: "tree.png",
+    mimeType: "image/png",
+    buffer: await sharp({
+      create: { width: 40, height: 40, channels: 3, background: "green" },
+    })
+      .png()
+      .toBuffer(),
+  });
+  await page.getByLabel("What did you do?").fill("I planted a tree.");
+  await expect(
+    page.getByText("17 / 2,000 characters", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Development assessment fixture")
+    .selectOption("needs_more_evidence");
+  await page.getByRole("button", { name: "Save evidence & assess" }).click();
+  await expect(
+    page.getByRole("heading", { name: "A clearer picture would help" }),
+  ).toBeVisible();
+  const assessmentPath = new URL(page.url()).pathname;
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await signIn(creator, challengePath);
+  await expect(
+    page.getByText("Gemini: needs more evidence", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: "Submitted result evidence" }),
+  ).toBeVisible();
+  await page
+    .getByRole("textbox", { name: /Review reason for submission/ })
+    .fill("The photo and description satisfy the mission.");
+  await page.getByRole("button", { name: "Approve submission" }).click();
+  await expect(
+    page.getByText("Approved by creator", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Text size").selectOption("large");
+  await page.reload();
+  await expect(page.getByLabel("Text size")).toHaveValue("large");
+  expect(
+    await page.evaluate(
+      () => getComputedStyle(document.documentElement).fontSize,
+    ),
+  ).toBe("20px");
+  await fs.mkdir("test-results/screenshots", { recursive: true });
+  await page.screenshot({
+    path: "test-results/screenshots/creator-review.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 900 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > innerWidth,
+    ),
+  ).toBe(false);
+  await page.getByLabel("Text size").selectOption("default");
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await signIn(creator + " member", assessmentPath);
+  await expect(
+    page.getByText("Creator approved this submission", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".reward")).toHaveText("+50");
+  await page.reload();
+  await expect(page.locator(".reward")).toHaveText("+50");
 });
 test("mobile and desktop Discover: responsive layout, filtering and per-record navigation", async ({
   page,

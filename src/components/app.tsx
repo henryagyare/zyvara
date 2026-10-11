@@ -42,6 +42,20 @@ export function ZyvaraApp() {
   const [config, setConfig] = useState<Config | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
+  const [textSize, setTextSize] = useState("default");
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        const saved = localStorage.getItem("zyvara-text-size");
+        if (saved && ["small", "default", "large"].includes(saved)) {
+          setTextSize(saved);
+          document.documentElement.style.fontSize =
+            saved === "large" ? "20px" : saved === "small" ? "14px" : "16px";
+        }
+      } catch {}
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
   const refresh = useCallback(async () => {
     try {
       const [session, configuration] = await Promise.all([
@@ -176,6 +190,30 @@ export function ZyvaraApp() {
         <footer className="footer">
           <span>Small actions. Lasting habits.</span>
           <Link href="/privacy">Privacy & participation</Link>
+          <label className="text-size-control">
+            Text size{" "}
+            <select
+              aria-label="Text size"
+              value={textSize}
+              onChange={(e) => {
+                const value = e.target.value;
+                setTextSize(value);
+                document.documentElement.style.fontSize =
+                  value === "large"
+                    ? "20px"
+                    : value === "small"
+                      ? "14px"
+                      : "16px";
+                try {
+                  localStorage.setItem("zyvara-text-size", value);
+                } catch {}
+              }}
+            >
+              <option value="small">Small</option>
+              <option value="default">Default</option>
+              <option value="large">Large</option>
+            </select>
+          </label>
           <span>zyvara.us</span>
         </footer>
         <nav className="bottom-nav" aria-label="Mobile navigation">

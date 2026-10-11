@@ -26,6 +26,7 @@ import {
 let folder: string;
 let alice: Member;
 let bob: Member;
+let creator: Member;
 let photo: Buffer;
 test("Gemini adapter runs through saved evidence, failed-job retry, persisted verdict, and one award", async () => {
   const previousProvider = process.env.ASSESSMENT_PROVIDER;
@@ -108,6 +109,7 @@ before(async () => {
   await seed();
   alice = await upsertMember("test:alice", "Alice");
   bob = await upsertMember("test:bob", "Bob");
+  creator = await upsertMember("test:creator", "Creator");
   photo = await sharp({
     create: { width: 80, height: 60, channels: 3, background: "#245C42" },
   })
@@ -176,7 +178,7 @@ test(
   },
 );
 async function challenge(title = "Test action") {
-  return service.createChallenge(alice, {
+  return service.createChallenge(creator, {
     title,
     category: "Cleanup",
     description: "Do a safe action",
@@ -397,7 +399,7 @@ test("stale assessment cannot overwrite revised evidence or authorize an award",
 test("deadline/closure checked at acceptance, duplicate finalization prevented", async () => {
   const c = await challenge();
   const id = await upload();
-  await service.closeChallenge(alice, c.id);
+  await service.closeChallenge(creator, c.id);
   await assert.rejects(
     service.finalizeEvidence(alice, {
       challengeId: c.id,
@@ -522,4 +524,82 @@ test("durable PostgreSQL records survive a new server process", async () => {
   );
   assert.equal(Number(result.stdout.trim()), before.count);
   await getDb();
+});
+test("creator review protects ownership, immutable versions and one-time rewards", async () => {
+  const c = await challenge("Creator review action");
+  await assert.rejects(contribute(c.id, "supported", creator), /cannot submit/);
+  const row = await contribute(c.id, "needs_more_evidence");
+  const initial = await service.contributionDetail(alice, row.id);
+  await assert.rejects(
+    service.reviewContribution(creator, row.id, {
+      evidenceId: initial.evidence.id,
+      decision: "approve",
+      reason: "Checked evidence",
+    }),
+    /Wait for/,
+  );
+  await assert.rejects(service.creatorSubmissions(bob, c.id));
+  await assert.rejects(service.contributionDetail(bob, row.id));
+  await service.processAssessment(alice, row.id);
+  const queue = await service.creatorSubmissions(creator, c.id);
+  assert.equal(queue.submissions[0].assessment?.outcome, "needs_more_evidence");
+  assert.ok(
+    (await service.media(creator, initial.evidence.resultUploadId)).length,
+  );
+  await assert.rejects(
+    service.reviewContribution(alice, row.id, {
+      evidenceId: initial.evidence.id,
+      decision: "approve",
+      reason: "Self approve",
+    }),
+  );
+  await assert.rejects(
+    service.reviewContribution(creator, row.id, {
+      evidenceId: randomUUID(),
+      decision: "approve",
+      reason: "Stale evidence",
+    }),
+    /Evidence changed/,
+  );
+  const outcomes = await Promise.allSettled(
+    Array.from({ length: 3 }, () =>
+      service.reviewContribution(creator, row.id, {
+        evidenceId: initial.evidence.id,
+        decision: "approve",
+        reason: "Human review confirms requirements",
+      }),
+    ),
+  );
+  assert.equal(outcomes.filter((r) => r.status === "fulfilled").length, 1);
+  const approved = await service.contributionDetail(alice, row.id);
+  assert.equal(approved.points, 50);
+  assert.equal(approved.contribution.outcome, "supported");
+  assert.equal(approved.assessment?.outcome, "needs_more_evidence");
+  assert.equal(approved.review?.decision, "approve");
+  await service.processAssessment(alice, row.id);
+  assert.equal((await service.contributionDetail(alice, row.id)).points, 50);
+  const secondChallenge = await challenge("Denied by creator");
+  const second = await contribute(secondChallenge.id, "supported", alice, true);
+  const assessed = await service.processAssessment(alice, second.id);
+  assert.equal(assessed.points, 50);
+  const denied = await service.reviewContribution(creator, second.id, {
+    evidenceId: assessed.evidence.id,
+    decision: "deny",
+    reason: "Evidence does not satisfy our requirements",
+  });
+  assert.equal(denied.points, 0);
+  assert.equal(denied.contribution.consent, false);
+  assert.equal(denied.assessment?.outcome, "supported");
+  assert.equal(denied.contribution.outcome, "not_supported");
+  assert.ok(!(await service.community()).some((p) => p.id === second.id));
+  const revision = await contribute(secondChallenge.id, "not_supported");
+  await service.processAssessment(alice, revision.id);
+  await assert.rejects(
+    service.reviewContribution(creator, second.id, {
+      evidenceId: assessed.evidence.id,
+      decision: "approve",
+      reason: "Old version",
+    }),
+    /Evidence changed/,
+  );
 });

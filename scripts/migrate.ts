@@ -13,8 +13,11 @@ async function main() {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(739182)`);
     await tx.execute(sql.raw(migration));
     await tx.execute(sql.raw(mediaMigration));
+    await tx.execute(
+      sql.raw(await readFile("drizzle/0003_creator_reviews.sql", "utf8")),
+    );
   });
-  console.log("Initial and private-media migrations applied successfully.");
+  console.log("Database migrations applied successfully.");
 }
 main()
   .catch(() => {

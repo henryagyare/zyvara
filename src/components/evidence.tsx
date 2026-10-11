@@ -112,7 +112,7 @@ function EvidenceForm({
   challengeId: string;
   revision: string | null;
 }) {
-  const { config } = useSession();
+  const { config, member } = useSession();
   const router = useRouter();
   const {
     data: challenge,
@@ -219,6 +219,18 @@ function EvidenceForm({
   const closed =
     challenge.status === "closed" ||
     (!!challenge.deadline && new Date(challenge.deadline) < new Date());
+  if (challenge.creatorId === member?.id)
+    return (
+      <>
+        <Heading
+          title="You created this challenge"
+          subtitle="Creators can review submissions but cannot submit their own evidence."
+        />
+        <Link className="btn" href={"/challenges/" + challengeId}>
+          Review submissions
+        </Link>
+      </>
+    );
   if (closed)
     return (
       <>
@@ -321,10 +333,17 @@ function EvidenceForm({
               value={description}
               disabled={busy}
               onChange={(e) => setDescription(e.target.value)}
-              aria-describedby="description-help"
+              aria-describedby="description-help description-count"
               aria-invalid={!!fields.description}
             />
           </Field>
+          <p id="description-count" className="helper">
+            {description.length} / 2,000 characters
+          </p>
+          <p className="helper">
+            The challenge creator can review your submitted photos and
+            description after the AI assessment.
+          </p>
           <label className="check-row">
             <input
               type="checkbox"
@@ -552,16 +571,34 @@ function AssessmentResult({ id }: { id: string }) {
             result && (
               <>
                 <section className="assessment-panel">
-                  <Outcome outcome={result.outcome} />
+                  <Outcome
+                    outcome={
+                      (data.contribution.outcome ||
+                        result.outcome) as typeof result.outcome
+                    }
+                  />
+                  {data.review && (
+                    <div className="feedback-note">
+                      <strong>
+                        Creator{" "}
+                        {data.review.decision === "approve"
+                          ? "approved"
+                          : "denied"}{" "}
+                        this submission
+                      </strong>
+                      <p>{data.review.reason}</p>
+                      <p>Gemini’s original feedback is retained below.</p>
+                    </div>
+                  )}
                   <h2>
-                    {result.outcome === "supported"
+                    {data.contribution.outcome === "supported"
                       ? "A contribution worth recognizing"
-                      : result.outcome === "needs_more_evidence"
+                      : !data.review && result.outcome === "needs_more_evidence"
                         ? "A clearer picture would help"
                         : "Review the challenge requirements"}
                   </h2>
                   <p>{result.feedback}</p>
-                  {result.outcome === "supported" && (
+                  {data.contribution.outcome === "supported" && (
                     <div className="row">
                       <span className="reward">+{data.points}</span>
                       <div>
@@ -574,22 +611,28 @@ function AssessmentResult({ id }: { id: string }) {
                   )}
                   <div className="divider" />
                   <h3>Your next step</h3>
-                  <p>{result.nextStep}</p>
+                  <p>
+                    {data.review
+                      ? data.review.decision === "approve"
+                        ? "Your creator approved this submission. View your progress or choose whether to share it."
+                        : "Read the creator’s reason above, then submit revised evidence."
+                      : result.nextStep}
+                  </p>
                   <div className="button-row">
                     <Link
                       className="btn"
                       href={
-                        result.outcome === "supported"
+                        data.contribution.outcome === "supported"
                           ? "/progress"
                           : "/evidence/" + data.challenge.id + "?revision=" + id
                       }
                     >
-                      {result.outcome === "supported"
+                      {data.contribution.outcome === "supported"
                         ? "View my progress"
                         : "Improve my evidence"}
                       <ArrowRight size={18} />
                     </Link>
-                    {result.outcome === "supported" &&
+                    {data.contribution.outcome === "supported" &&
                       (data.contribution.consent ? (
                         <ConfirmDialog
                           title="Withdraw community sharing?"

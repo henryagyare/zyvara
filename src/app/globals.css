@@ -31,8 +31,8 @@ body {
   background: var(--color-info-soft);
   color: var(--color-info);
   padding: 10px 64px;
-  font-size: 13px;
-  line-height: 20px;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
   border-bottom: 1px solid var(--color-border);
 }
 .error-banner {
@@ -52,8 +52,8 @@ body {
   grid-column: auto;
 }
 .card-info h2 {
-  font-size: 25px;
-  line-height: 33px;
+  font-size: 1.5625rem;
+  line-height: 2.0625rem;
 }
 .card-info p {
   display: -webkit-box;
@@ -147,7 +147,7 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--color-muted);
 }
 .footer a {
@@ -184,7 +184,7 @@ body {
   flex-wrap: wrap;
 }
 .history-card h3 {
-  font-size: 22px;
+  font-size: 1.375rem;
 }
 .button-row {
   display: flex;
@@ -195,25 +195,25 @@ body {
   padding: 16px;
   background: var(--color-info-soft);
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .signin-title {
-  font-size: 36px;
-  line-height: 42px;
+  font-size: 2.25rem;
+  line-height: 2.625rem;
 }
 .sign-in .welcome h2 {
-  font-size: 52px;
-  line-height: 60px;
+  font-size: 3.25rem;
+  line-height: 3.75rem;
 }
 .date-note {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--color-muted);
 }
 .card-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--color-muted);
 }
 .requirement-list {
@@ -232,7 +232,7 @@ body {
   margin-top: 3px;
 }
 .requirement-result p {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--color-muted);
   margin-top: 6px;
 }
@@ -264,14 +264,14 @@ body {
     gap: 8px;
   }
   .brand {
-    font-size: 28px;
+    font-size: 1.75rem;
   }
   .nav-actions .btn {
     padding: 0 14px;
   }
   .feature h1 {
-    font-size: 44px;
-    line-height: 52px;
+    font-size: 2.75rem;
+    line-height: 3.25rem;
   }
   .mode-note {
     padding: 10px 24px;
@@ -290,11 +290,11 @@ body {
     display: none;
   }
   .nav-actions .btn {
-    font-size: 14px;
+    font-size: 0.875rem;
     height: 44px;
   }
   .brand {
-    font-size: 28px;
+    font-size: 1.75rem;
     gap: 8px;
   }
   .brand svg {
@@ -319,11 +319,11 @@ body {
   }
   .feature h1,
   h1 {
-    font-size: 36px;
-    line-height: 42px;
+    font-size: 2.25rem;
+    line-height: 2.625rem;
   }
   .feature-copy p {
-    font-size: 16px;
+    font-size: 1rem;
   }
   .feature-copy {
     gap: 20px;
@@ -341,8 +341,8 @@ body {
     gap: 12px;
   }
   .section-heading h2 {
-    font-size: 28px;
-    line-height: 36px;
+    font-size: 1.75rem;
+    line-height: 2.25rem;
   }
   .section-heading .btn {
     padding: 0 14px;
@@ -380,8 +380,8 @@ body {
     max-width: 40%;
   }
   .mission-art h2 {
-    font-size: 26px;
-    line-height: 34px;
+    font-size: 1.625rem;
+    line-height: 2.125rem;
   }
   .form-actions {
     flex-direction: column;
@@ -400,8 +400,8 @@ body {
     min-width: 90px;
   }
   .stat strong {
-    font-size: 36px;
-    line-height: 44px;
+    font-size: 2.25rem;
+    line-height: 2.75rem;
   }
   .progress-profile {
     gap: 16px;
@@ -409,11 +409,11 @@ body {
   .progress-profile .avatar {
     width: 56px;
     height: 56px;
-    font-size: 22px;
+    font-size: 1.375rem;
   }
   .progress-profile h2 {
-    font-size: 24px;
-    line-height: 32px;
+    font-size: 1.5rem;
+    line-height: 2rem;
   }
   .bottom-nav {
     display: flex;
@@ -435,8 +435,8 @@ body {
     justify-content: center;
     min-width: 60px;
     min-height: 48px;
-    font-size: 11px;
-    line-height: 16px;
+    font-size: 0.6875rem;
+    line-height: 1rem;
     color: var(--color-muted);
   }
   .bottom-nav a[aria-current="page"] {
@@ -463,8 +463,8 @@ body {
     gap: 16px;
   }
   .sign-in .welcome h2 {
-    font-size: 36px;
-    line-height: 42px;
+    font-size: 2.25rem;
+    line-height: 2.625rem;
   }
   .sign-in .welcome svg {
     display: none;
@@ -474,16 +474,16 @@ body {
     max-width: none;
   }
   .signin-title {
-    font-size: 32px;
-    line-height: 40px;
+    font-size: 2rem;
+    line-height: 2.5rem;
   }
   .row {
     flex-wrap: wrap;
     gap: 12px;
   }
   .assessment-panel .reward {
-    font-size: 56px;
-    line-height: 64px;
+    font-size: 3.5rem;
+    line-height: 4rem;
   }
   .dialog {
     padding: 24px;
@@ -498,4 +498,34 @@ body {
   .post-copy {
     padding: 0 20px 20px;
   }
+}
+
+.reward .small {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 1.25rem;
+}
+.text-size-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.text-size-control select {
+  padding: 0.4rem;
+}
+.footer {
+  flex-wrap: wrap;
+}
+.review-photo {
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+}
+.review-card {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
 }
