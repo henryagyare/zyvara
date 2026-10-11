@@ -1,6 +1,6 @@
 # Zyvara
 
-Responsive environmental challenge application for **zyvara.us**. Next.js App Router, React, TypeScript, Drizzle/PostgreSQL, Firebase Auth/Storage adapters, and a server-side deterministic mock assessment provider. The original `design-system/` files are preserved and imported as the theme foundation.
+Responsive environmental challenge application for **zyvara.us**. Next.js App Router, React, TypeScript, Drizzle/PostgreSQL, Firebase Auth/Storage adapters, and server-side Gemini or deterministic mock assessments. The original `design-system/` files are preserved and imported as the theme foundation.
 
 ## Local development
 
@@ -34,11 +34,13 @@ Apply `storage.rules` to deny client SDK access. Set bucket CORS using `storage.
 
 ## Implemented flows
 
-Discover/search/category filtering → individual challenge detail → sign-in → private photo upload → immutable evidence finalization → persisted mock assessment → duplicate-safe 50-point award → progress/history → optional consented community publication and withdrawal. Manual creation, creator closure, owner contribution deletion, report submission, and admin hiding endpoints are included. Points are derived from stored rewards; no carbon savings or confidence percentages are invented.
+Discover/search/category filtering → individual challenge detail → sign-in → private photo upload → immutable evidence finalization → persisted assessment → duplicate-safe 50-point award → progress/history → optional consented community publication and withdrawal. Manual creation, creator closure, owner contribution deletion, report submission, and admin hiding endpoints are included. Points are derived from stored rewards; no carbon savings or confidence percentages are invented.
 
 Photos and descriptions remain selected after upload errors. Successful upload IDs are reused if finalization fails. Provider failures retry stored evidence. Revisions snapshot requirements and retain previous versions; stale results cannot award or overwrite the current revision. Sharing starts off. Only supported, consented, non-hidden latest evidence is public. Public images have `private, no-store` cache headers so withdrawal takes effect on subsequent requests.
 
 Every mock result is explicitly simulated; it is not image analysis. Development fixtures include supported, needs-more-evidence, not-supported, permanent failure, and failure-once recovery. Ordinary production clients cannot select scenarios or authorize rewards. [AI handoff and exact adapter contract](docs/AI-HANDOFF.md).
+
+The teammate Gemini module is integrated server-side. Activate with `ASSESSMENT_PROVIDER=gemini`, `GEMINI_API_KEY`, and `GEMINI_MODEL`; no separate AI service is required. [Exact remaining setup steps](docs/SETUP-NEXT-STEPS.md).
 
 ## Checks
 

@@ -1,6 +1,10 @@
 # Assessment adapter contract
 
-The AI teammate owns a new provider module. This application currently makes **no Gemini calls** and requires no Gemini key. `src/server/assessment.ts` defines the exact TypeScript interface and Zod result validator. Fullstack owns orchestration, jobs, authorization, revisions, rewards, and publication.
+The Gemini module from [Gabbystarks7/zyvara_ai](https://github.com/Gabbystarks7/zyvara_ai), commit `43e5e2485d840f7c7c8a85883e670d2ab99a00d2`, is integrated in `src/server/ai/`. `src/server/gemini-assessment.ts` connects it to the existing job runner. Default configuration remains mock until live credentials are supplied. Fullstack owns orchestration, jobs, authorization, revisions, rewards, and publication.
+
+The imported module is adapted to request and validate one result for every immutable requirement, plus a practical next step. Its overall `insufficient_evidence` status maps to `needs_more_evidence`. Qualitative confidence is not displayed as a probability. Canonical challenge metadata comes from the server; requirement and description snapshots come from the accepted evidence version. Sanitized WebP bytes are supplied directly, with no private URLs or Google identity. No separate AI server or teammate deployment is needed.
+
+Set server-only `GEMINI_API_KEY`, `GEMINI_MODEL=gemini-3.8-flash` (the teammate's tested model, subject to availability in your API project), and `ASSESSMENT_PROVIDER=gemini` to activate. Never use a `NEXT_PUBLIC_` key. The adapter cancels at 20 seconds and makes one provider call per job attempt; the existing persisted retry system owns retries. Provider errors retain evidence and issue no points. The 5 MiB per-image AI limit is enforced before the call. UI simulation labels and privacy disclosure switch with configuration; historical mock results retain their simulation flag.
 
 ```ts
 interface AssessmentInput {
@@ -10,6 +14,7 @@ interface AssessmentInput {
   beforeImage?: { bytes: Buffer; mime: 'image/webp'; checksum: string };
   evidenceVersion: number;
   requestId: string;                   // unique attempt identifier
+  challenge?: { id: string; title: string; description: string; category: string };
 }
 interface AssessmentProvider {
   readonly id: string;
@@ -39,7 +44,7 @@ Outcomes: `supported`, `needs_more_evidence`, `not_supported`. Requirement statu
 
 The mock has deterministic fixtures: `supported`, `needs_more_evidence`, `not_supported`, `failure`, `failure_once`. Set `MOCK_SCENARIO` on the server. Scenario selection in the evidence form is restricted to development or `DEMO_MODE=true`; no such controls are permitted for ordinary production users. The default is `needs_more_evidence`, never an automatic successful award. `failure_once` fails the first attempt and succeeds on retry using the same stored evidence. Jobs persist the selected server-approved fixture.
 
-Install the teammate module beside `assessment.ts` and return it from `getAssessmentProvider()` based on `ASSESSMENT_PROVIDER`. Set the provider's `simulated` flag to false and revise the privacy copy before activating live analysis. UI labeling derives from provider configuration and persisted result flags. No changes to evidence finalization, the job runner, reward transaction, progress queries, or storage authorization should be required.
+`getAssessmentProvider()` selects `mock` or `gemini` from `ASSESSMENT_PROVIDER`. Live provider results have `simulated: false`; privacy and submission copy disclose Google Gemini processing. Evidence finalization, the reward transaction, progress queries, and storage authorization retain their existing guarantees.
 
 The runner persists pending → processing → completed/failed, a unique request ID, attempt count, error, 60-second lease, and a 2-second retry cooldown. It awaits the provider within a 25-second application timeout. The provider should implement its own request cancellation/timeout below 25 seconds; JavaScript timeout alone does not cancel an external request. Maximum five attempts per evidence version. A returning owner can resume an expired lease. This is resumable request processing, not a continuously running worker.
 

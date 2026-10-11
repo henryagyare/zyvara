@@ -15,10 +15,86 @@ import { upsertMember, type Member } from "../src/server/auth";
 import { validatePhoto, MAX_PHOTO_BYTES } from "../src/server/storage";
 import { mockProvider, validateProviderResult } from "../src/server/assessment";
 import { challengeInput } from "../src/server/validation";
+import {
+  createZyvaraGeminiProvider,
+  geminiProvider,
+} from "../src/server/gemini-assessment";
 let folder: string;
 let alice: Member;
 let bob: Member;
 let photo: Buffer;
+test("Gemini adapter runs through saved evidence, failed-job retry, persisted verdict, and one award", async () => {
+  const previousProvider = process.env.ASSESSMENT_PROVIDER;
+  const original = geminiProvider.assess;
+  let fail = true;
+  let calls = 0;
+  const live = createZyvaraGeminiProvider(
+    {
+      generate: async (parts) => {
+        calls++;
+        if (fail) throw { status: 503, message: "private-provider-error" };
+        const fields = JSON.parse(
+          parts[0].text!.split("\n").slice(1).join("\n"),
+        );
+        assert.deepEqual(fields.requirements, ["Show the result."]);
+        assert.equal(parts[1].text, "SUBMITTED IMAGE");
+        return JSON.stringify({
+          status: "supported",
+          confidence: "medium",
+          observations: ["The submitted result is visible."],
+          requirements: fields.requirements.map((requirement: string) => ({
+            requirement,
+            status: "supported",
+            explanation: "Visible result.",
+          })),
+          feedback: "The evidence supports the saved requirement.",
+          nextStep: "View your progress.",
+        });
+      },
+    },
+    { model: "fake-gemini-integration" },
+  );
+  geminiProvider.assess = live.assess;
+  process.env.ASSESSMENT_PROVIDER = "gemini";
+  try {
+    const c = await challenge("Gemini integration action");
+    const row = await contribute(c.id);
+    const db = await getDb();
+    await db
+      .update(schema.challenges)
+      .set({ requirements: ["Edited after acceptance"] })
+      .where(eq(schema.challenges.id, c.id));
+    const failed = await service.processAssessment(alice, row.id);
+    assert.equal(failed.job.state, "failed");
+    assert.equal(failed.points, 0);
+    assert.equal(calls, 1);
+    fail = false;
+    await db
+      .update(schema.jobs)
+      .set({ retryAt: new Date(0) })
+      .where(eq(schema.jobs.id, failed.job.id));
+    await Promise.all(
+      Array.from({ length: 4 }, () => service.processAssessment(alice, row.id)),
+    );
+    const saved = await service.contributionDetail(alice, row.id);
+    assert.equal(saved.evidence.id, failed.evidence.id);
+    assert.equal(saved.assessment?.simulated, false);
+    assert.equal(saved.assessment?.outcome, "supported");
+    assert.equal(saved.points, 50);
+    assert.equal(calls, 2);
+    await service.processAssessment(alice, row.id);
+    assert.equal(calls, 2);
+    const awards = await db
+      .select()
+      .from(schema.rewards)
+      .where(eq(schema.rewards.contributionId, row.id));
+    assert.equal(awards.length, 1);
+  } finally {
+    geminiProvider.assess = original;
+    if (previousProvider === undefined) delete process.env.ASSESSMENT_PROVIDER;
+    else process.env.ASSESSMENT_PROVIDER = previousProvider;
+  }
+});
 before(async () => {
   await mkdir(".data", { recursive: true });
   folder = await mkdtemp(path.resolve(".data", "test-"));
@@ -364,7 +440,7 @@ test("ordinary production clients cannot choose a reward-authorizing scenario", 
       /Scenario selection is disabled/,
     );
   } finally {
-    if (previous === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
+    if (previous === undefined) Reflect.deleteProperty(process.env, "NODE_ENV");
     else Object.assign(process.env, { NODE_ENV: previous });
     if (demo !== undefined) process.env.DEMO_MODE = demo;
   }

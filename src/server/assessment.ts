@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { geminiProvider } from "./gemini-assessment";
 export const resultSchema = z.object({
   outcome: z.enum(["supported", "needs_more_evidence", "not_supported"]),
   observations: z.array(z.string().min(1).max(1000)).min(1).max(20),
@@ -23,6 +24,12 @@ export type StoredImage = {
   checksum: string;
 };
 export type AssessmentInput = {
+  challenge?: {
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+  };
   requirements: string[];
   description: string;
   resultImage: StoredImage;
@@ -97,13 +104,12 @@ export const mockProvider: AssessmentProvider = {
   },
 };
 export function getAssessmentProvider(): AssessmentProvider {
+  if (process.env.ASSESSMENT_PROVIDER === "gemini") return geminiProvider;
   if (
     process.env.ASSESSMENT_PROVIDER &&
     process.env.ASSESSMENT_PROVIDER !== "mock"
   )
-    throw new Error(
-      "Assessment provider is not configured. Install the teammate adapter before selecting it.",
-    );
+    throw new Error("Unknown assessment provider. Select mock or gemini.");
   return mockProvider;
 }
 export function validateProviderResult(value: unknown, requirements: string[]) {

@@ -405,7 +405,7 @@ export async function contributionDetail(member: Member, id: string) {
   };
 }
 export async function processAssessment(member: Member, id: string) {
-  await ownContribution(member, id);
+  const owned = await ownContribution(member, id);
   const db = await getDb();
   const claim = await db.transaction(async (tx) => {
     const [contribution] = await tx
@@ -472,10 +472,20 @@ export async function processAssessment(member: Member, id: string) {
       };
     };
     const provider = getAssessmentProvider();
+    const [challenge] = await db
+      .select()
+      .from(s.challenges)
+      .where(eq(s.challenges.id, owned.challengeId));
     let timer: ReturnType<typeof setTimeout> | undefined;
     const raw = await Promise.race([
       provider.assess(
         {
+          challenge: {
+            id: challenge.id,
+            title: challenge.title,
+            description: challenge.description,
+            category: challenge.category,
+          },
           requirements: claim.version.requirements,
           description: claim.version.description,
           resultImage: await load(claim.version.resultUploadId),

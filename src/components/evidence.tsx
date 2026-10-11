@@ -383,6 +383,17 @@ function EvidenceForm({
               </p>
             </section>
           )}
+          {config?.simulatedAssessment === false && (
+            <section>
+              <strong>Google Gemini assessment</strong>
+              <p className="muted">
+                Submitting sends sanitized photos, your description, and
+                challenge requirements to Google Gemini for assessment.
+                Community sharing remains your choice.{" "}
+                <Link href="/privacy">Privacy details</Link>
+              </p>
+            </section>
+          )}
         </aside>
       </div>
     </>

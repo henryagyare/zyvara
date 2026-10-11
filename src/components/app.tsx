@@ -161,8 +161,10 @@ export function ZyvaraApp() {
         </header>
         {config?.demo && (
           <div className="mode-note">
-            Restricted development demo · Persistent local records · Assessments
-            are simulated
+            Restricted development demo · Persistent records
+            {config.simulatedAssessment
+              ? " · Assessments are simulated"
+              : " · Gemini photo assessments"}
           </div>
         )}
         <main className="main" id="main" tabIndex={-1}>

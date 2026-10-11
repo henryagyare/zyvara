@@ -17,6 +17,9 @@ export function productionReady() {
     process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN &&
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID &&
     process.env.AUTH_MODE === "firebase" &&
-    process.env.STORAGE_MODE === "firebase"
+    process.env.STORAGE_MODE === "firebase" &&
+    (process.env.ASSESSMENT_PROVIDER !== "gemini" ||
+      (!!process.env.GEMINI_API_KEY?.trim() &&
+        !!process.env.GEMINI_MODEL?.trim()))
   );
 }

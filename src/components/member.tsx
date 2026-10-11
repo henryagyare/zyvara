@@ -448,6 +448,7 @@ export function SignIn() {
   );
 }
 export function Privacy() {
+  const { config } = useSession();
   return (
     <article className="stack legal">
       <Heading
@@ -469,13 +470,14 @@ export function Privacy() {
         name, selected photos, description, challenge, and assessment status.
         You can withdraw sharing from the assessment page at any time.
       </p>
-      <h2>Simulated assessments</h2>
+      <h2>Photo assessments</h2>
       <p>
-        The current provider returns controlled test results and does not
-        analyze photos. No photos are sent to Gemini. Recognition celebrates
-        documented participation, rather than independently verified activity or
-        measured carbon savings. A future live provider must update these notes
-        before launch.
+        {config?.simulatedAssessment === false
+          ? "For assessment, Zyvara sends sanitized copies of your submitted photos, your description, and challenge requirements to Google Gemini. Your Google identity and private storage links are not included. Sharing with the community remains a separate choice."
+          : "The current provider returns controlled test results and does not analyze photos. No photos are sent to Gemini in simulation mode."}{" "}
+        Photo evidence cannot establish who performed an activity, when it
+        happened, or measured environmental impact. Recognition celebrates
+        documented participation.
       </p>
       <h2>Deletion and recognition</h2>
       <p>

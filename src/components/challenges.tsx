@@ -163,7 +163,7 @@ function ChallengeCard({ challenge: c }: { challenge: Challenge }) {
   );
 }
 export function Details({ id }: { id: string }) {
-  const { member } = useSession();
+  const { member, config } = useSession();
   const {
     data: c,
     error,
@@ -258,7 +258,9 @@ export function Details({ id }: { id: string }) {
               optional. Sharing is your choice and starts off.
             </p>
             <p className="small muted">
-              The current assessment provider is a labeled simulation.
+              {config?.simulatedAssessment === false
+                ? "Submitted photos and descriptions are assessed by Google Gemini. See Privacy & participation for details."
+                : "The current assessment provider is a labeled simulation."}
             </p>
           </section>
           {member?.id === c.creatorId && !closed && (
