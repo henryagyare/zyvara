@@ -3,7 +3,11 @@ import { and, eq, ilike, sql, desc, isNull } from "drizzle-orm";
 import { getDb } from "./db";
 import * as s from "./schema";
 import { AppError } from "./errors";
-import { challengeInput, contributionInput } from "./validation";
+import {
+  challengeInput,
+  challengeSettingsInput,
+  contributionInput,
+} from "./validation";
 import {
   getAssessmentProvider,
   validateProviderResult,
@@ -51,6 +55,9 @@ export async function discover(category?: string, query?: string) {
       title: s.challenges.title,
       description: s.challenges.description,
       category: s.challenges.category,
+      points: s.challenges.points,
+      fontFamily: s.challenges.fontFamily,
+      fontSize: s.challenges.fontSize,
       deadline: s.challenges.deadline,
       status: s.challenges.status,
       creator: s.users.name,
@@ -124,6 +131,27 @@ export async function closeChallenge(member: Member, id: string) {
     .returning();
   if (!row) throw new AppError(404, "Challenge not found or not owned by you.");
   return row;
+}
+export async function updateChallengeSettings(
+  member: Member,
+  id: string,
+  input: unknown,
+) {
+  const value = challengeSettingsInput.parse(input);
+  const db = await getDb();
+  const [row] = await db
+    .update(s.challenges)
+    .set(value)
+    .where(
+      and(
+        eq(s.challenges.id, id),
+        eq(s.challenges.creatorId, member.id),
+        eq(s.challenges.hidden, false),
+      ),
+    )
+    .returning();
+  if (!row) throw new AppError(404, "Challenge not found or not owned by you.");
+  return challengeDetail(id);
 }
 export async function allocateUpload(
   member: Member,
@@ -278,6 +306,7 @@ export async function finalizeEvidence(member: Member, input: unknown) {
         id: randomUUID(),
         ownerId: member.id,
         challengeId: challenge.id,
+        rewardPoints: challenge.points,
       })
       .onConflictDoNothing();
     const [contribution] = await tx
@@ -585,9 +614,12 @@ export async function processAssessment(member: Member, id: string) {
             contributionId: id,
             ownerId: member.id,
             assessmentId,
-            amount: 50,
+            amount: contribution.rewardPoints,
           })
-          .onConflictDoNothing({ target: s.rewards.contributionId });
+          .onConflictDoUpdate({
+            target: s.rewards.contributionId,
+            set: { amount: contribution.rewardPoints, assessmentId },
+          });
     });
   } catch (error) {
     const message =
@@ -961,11 +993,11 @@ export async function reviewContribution(
           contributionId: id,
           ownerId: row.ownerId,
           assessmentId: assessment.id,
-          amount: 50,
+          amount: row.rewardPoints,
         })
         .onConflictDoUpdate({
           target: s.rewards.contributionId,
-          set: { amount: 50, assessmentId: assessment.id },
+          set: { amount: row.rewardPoints, assessmentId: assessment.id },
         });
     else
       await tx

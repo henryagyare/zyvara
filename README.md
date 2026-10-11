@@ -36,7 +36,7 @@ All retrieval uses `/api/media/:uploadId` after ownership, challenge-creator rev
 
 ## Implemented flows
 
-Discover/search/category filtering → individual challenge detail → sign-in → private photo upload → immutable evidence finalization → persisted assessment → duplicate-safe 50-point award → progress/history → optional consented community publication and withdrawal. Manual creation, creator closure, owner contribution deletion, report submission, and admin hiding endpoints are included. Points are derived from stored rewards; no carbon savings or confidence percentages are invented.
+Discover/search/category filtering → individual challenge detail → sign-in → private photo upload → immutable evidence finalization → persisted assessment → duplicate-safe creator-set point award → progress/history → optional consented community publication and withdrawal. Manual creation, creator closure, owner contribution deletion, report submission, and admin hiding endpoints are included. Points are derived from stored rewards; no carbon savings or confidence percentages are invented.
 
 Photos and descriptions remain selected after upload errors. Successful upload IDs are reused if finalization fails. Provider failures retry stored evidence. Revisions snapshot requirements and retain previous versions; stale results cannot award or overwrite the current revision. Sharing starts off. Only supported, consented, non-hidden latest evidence is public. Public images have `private, no-store` cache headers so withdrawal takes effect on subsequent requests.
 
@@ -66,5 +66,8 @@ GitHub Actions checks the source and build. Keep preview and production database
 
 Official references used: [Next route handlers](https://nextjs.org/docs/app/getting-started/route-handlers), [Firebase server session cookies](https://firebase.google.com/docs/auth/admin/manage-cookies), [Drizzle PGlite adapter](https://orm.drizzle.team/docs/connect-pglite), [PGlite persistent filesystems](https://pglite.dev/docs/filesystems).
 
-Creators cannot submit to their own challenges. On their challenge page, they can review the latest evidence after Gemini, record a reason, and approve or deny once per evidence version. Approval grants at most 50 points; denial removes points and sharing. Original AI feedback is retained. Description fields show live counts against the existing 2,000-character limit. The footer offers persistent Small, Default, and Large text sizes.
+Creators cannot submit to their own challenges. On their challenge page, they can review the latest evidence after Gemini, record a reason, and approve or deny once per evidence version. Approval grants the saved submission points once; denial removes points and sharing. Original AI feedback is retained. Description fields show live counts against the existing 2,000-character limit. The footer offers persistent Small, Default, and Large text sizes.
+
+
+Creators can choose 1–1,000 points at creation and update points, font family (Zyvara default, sans serif, serif), and text size under Challenge settings after publication. Reward changes apply to new participants; existing submissions and their revisions retain the first accepted reward. Existing challenges and contributions default to 50 points. Migration 0004 adds these settings and reward snapshots.
 

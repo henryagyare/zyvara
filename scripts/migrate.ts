@@ -16,6 +16,9 @@ async function main() {
     await tx.execute(
       sql.raw(await readFile("drizzle/0003_creator_reviews.sql", "utf8")),
     );
+    await tx.execute(
+      sql.raw(await readFile("drizzle/0004_challenge_settings.sql", "utf8")),
+    );
   });
   console.log("Database migrations applied successfully.");
 }

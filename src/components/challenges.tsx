@@ -18,6 +18,7 @@ import {
 } from "./shared";
 import { CreatorReview } from "./review";
 import { MemberGate, useSession } from "./app";
+import { ChallengeSettings } from "./challenge-settings";
 const categories = ["Cleanup", "Planting", "Recycling", "Conservation"];
 export function Discover() {
   const { config } = useSession();
@@ -156,7 +157,7 @@ function ChallengeCard({ challenge: c }: { challenge: Challenge }) {
           </span>
         </div>
         <div className="card-footer">
-          <b>50 points once supported</b>
+          <b>{c.points} points once supported</b>
           <ArrowRight size={18} aria-hidden="true" />
         </div>
       </div>
@@ -165,12 +166,7 @@ function ChallengeCard({ challenge: c }: { challenge: Challenge }) {
 }
 export function Details({ id }: { id: string }) {
   const { member, config } = useSession();
-  const {
-    data: c,
-    error,
-    loading,
-    reload,
-  } = useResource<Challenge>("challenges/" + id);
+  const { data: c, error, reload } = useResource<Challenge>("challenges/" + id);
   if (error)
     return (
       <>
@@ -181,12 +177,16 @@ export function Details({ id }: { id: string }) {
         </Link>
       </>
     );
-  if (loading || !c) return <Loading label="Opening challenge…" />;
+  if (!c) return <Loading label="Opening challenge…" />;
   const closed =
     c.status === "closed" ||
     (!!c.deadline && new Date(c.deadline) < new Date());
   return (
-    <>
+    <div
+      className="challenge-appearance"
+      data-font={c.fontFamily}
+      data-size={c.fontSize}
+    >
       <Heading
         title={c.title}
         subtitle={c.description}
@@ -212,6 +212,9 @@ export function Details({ id }: { id: string }) {
               </div>
             ))}
           </section>
+          {member?.id === c.creatorId && (
+            <ChallengeSettings key={c.id} challenge={c} reload={reload} />
+          )}
           {member?.id === c.creatorId && <CreatorReview challengeId={id} />}
           <div className="feedback-note">
             Choose a safe, permitted location. Avoid identifiable people,
@@ -222,7 +225,7 @@ export function Details({ id }: { id: string }) {
           <section className="panel">
             <span className="eyebrow">Recognition for participation</span>
             <div className="reward">
-              50 <span className="small">points</span>
+              {c.points} <span className="small">points</span>
             </div>
             <p className="muted">
               Earned once when your contribution receives a supported
@@ -285,7 +288,7 @@ export function Details({ id }: { id: string }) {
           )}
         </aside>
       </div>
-    </>
+    </div>
   );
 }
 export function Create() {
@@ -302,6 +305,7 @@ function CreateForm() {
   const [category, setCategory] = useState("Cleanup");
   const [requirements, setRequirements] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [points, setPoints] = useState(50);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -316,6 +320,7 @@ function CreateForm() {
         title,
         description,
         category,
+        points,
         requirements: requirements
           .split("\n")
           .map((r) => r.trim())
@@ -409,6 +414,25 @@ function CreateForm() {
             </p>
           )}
           <Field
+            name="points"
+            label="Participation points"
+            help="Whole numbers from 1 to 1,000. You can change the reward for new participants later."
+            error={fields.points}
+          >
+            <input
+              id="points"
+              type="number"
+              min={1}
+              max={1000}
+              step={1}
+              required
+              value={points}
+              onChange={(e) => setPoints(Number(e.target.value))}
+              aria-describedby="points-help"
+              aria-invalid={!!fields.points}
+            />
+          </Field>
+          <Field
             name="requirements"
             label="Evidence requirements"
             help="One requirement per line. Maximum 2,000 characters in total."
@@ -453,7 +477,8 @@ function CreateForm() {
           <section>
             <strong>Recognition is consistent</strong>
             <p className="muted">
-              50 points once per member per supported challenge contribution.
+              {points} points once per member per supported challenge
+              contribution.
             </p>
           </section>
           <section>

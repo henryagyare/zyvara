@@ -511,6 +511,58 @@ body {
   height: auto;
   min-height: 220px;
 }
+.settings-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.challenge-appearance {
+  --challenge-scale: 1;
+  font-family: var(--font-body);
+  overflow-wrap: anywhere;
+}
+.challenge-appearance[data-font="sans"] {
+  --font-body: Arial, sans-serif;
+  --font-display: Arial, sans-serif;
+}
+.challenge-appearance[data-font="serif"] {
+  --font-body: Georgia, serif;
+  --font-display: Georgia, serif;
+}
+.challenge-appearance[data-size="small"] {
+  --challenge-scale: 0.875;
+}
+.challenge-appearance[data-size="large"] {
+  --challenge-scale: 1.25;
+}
+.challenge-appearance h1 {
+  font-size: calc(3.5rem * var(--challenge-scale));
+  line-height: 1.15;
+}
+.challenge-appearance h2 {
+  font-size: calc(1.75rem * var(--challenge-scale));
+  line-height: 1.3;
+}
+.challenge-appearance h3 {
+  font-size: calc(1.25rem * var(--challenge-scale));
+  line-height: 1.4;
+}
+.challenge-appearance p {
+  font-size: calc(1rem * var(--challenge-scale));
+  line-height: 1.5;
+}
+.challenge-appearance .mission-art h2 {
+  font-size: calc(2.5rem * var(--challenge-scale));
+}
+@media (max-width: 640px) {
+  .challenge-appearance h1 {
+    font-size: calc(2.25rem * var(--challenge-scale));
+  }
+  .challenge-appearance .mission-art h2 {
+    font-size: calc(1.5rem * var(--challenge-scale));
+  }
+}
 .text-size-control {
   display: flex;
   align-items: center;

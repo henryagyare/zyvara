@@ -344,6 +344,12 @@ function EvidenceForm({
             The challenge creator can review your submitted photos and
             description after the AI assessment.
           </p>
+          <p className="helper">
+            Reward:{" "}
+            {previous.data?.contribution.rewardPoints ?? challenge.points}{" "}
+            points once approved. Existing submissions keep their original
+            reward.
+          </p>
           <label className="check-row">
             <input
               type="checkbox"

@@ -14,7 +14,7 @@ export function CreatorReview({ challengeId }: { challengeId: string }) {
       <p>
         Review each member’s evidence after Gemini. Your decision and reason are
         saved separately from the AI feedback. Denial removes recognition and
-        community sharing; approval awards 50 points once.
+        community sharing; approval awards the submission’s saved points once.
       </p>
       {error && <ErrorNotice message={error} retry={reload} />}
       {loading && <Loading label="Loading submissions…" />}
@@ -56,6 +56,9 @@ function ReviewCard({
     <article className="review-card">
       <h3>Submission · Version {row.evidence.version}</h3>
       <p>{row.evidence.description}</p>
+      <p className="helper">
+        Reward for this submission: {row.contribution.rewardPoints} points.
+      </p>
       <Image
         className="review-photo"
         src={"/api/media/" + row.evidence.resultUploadId}

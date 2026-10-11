@@ -47,6 +47,9 @@ export type Challenge = {
   title: string;
   description: string;
   category: string;
+  points: number;
+  fontFamily: "default" | "sans" | "serif";
+  fontSize: "small" | "default" | "large";
   creator: string;
   creatorId?: string;
   deadline: string | null;
@@ -68,6 +71,7 @@ export type ContributionDetail = {
   contribution: {
     id: string;
     latestVersion: number;
+    rewardPoints: number;
     outcome: string | null;
     consent: boolean;
     hidden: boolean;

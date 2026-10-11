@@ -11,6 +11,9 @@ const narrative = z
   .min(1, "This field is required.")
   .max(2000, "Use at most 2,000 characters.");
 export const challengeInput = z.object({
+  points: z.number().int().min(1).max(1000).default(50),
+  fontFamily: z.enum(["default", "sans", "serif"]).default("default"),
+  fontSize: z.enum(["small", "default", "large"]).default("default"),
   title: z.string().trim().min(1).max(80),
   description: narrative,
   category: z.enum(categories),
@@ -24,6 +27,9 @@ export const challengeInput = z.object({
     ),
   deadline: z.iso.datetime({ offset: true }).nullable().optional(),
 });
+export const challengeSettingsInput = challengeInput
+  .pick({ points: true, fontFamily: true, fontSize: true })
+  .required();
 export const contributionInput = z.object({
   challengeId: z.string().min(1),
   description: narrative,

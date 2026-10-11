@@ -128,6 +128,19 @@ async function dispatch(request: NextRequest, context: Context) {
         { status: 201 },
       );
     if (
+      method === "PATCH" &&
+      path[0] === "challenges" &&
+      path[2] === "settings" &&
+      path.length === 3
+    )
+      return NextResponse.json(
+        await service.updateChallengeSettings(
+          member,
+          path[1],
+          await json(request),
+        ),
+      );
+    if (
       method === "POST" &&
       path[0] === "challenges" &&
       path[2] === "close" &&
@@ -309,4 +322,5 @@ async function dispatch(request: NextRequest, context: Context) {
 export const GET = dispatch;
 export const POST = dispatch;
 export const PUT = dispatch;
+export const PATCH = dispatch;
 export const DELETE = dispatch;

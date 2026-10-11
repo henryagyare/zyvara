@@ -6,4 +6,4 @@ CREATE TABLE IF NOT EXISTS creator_reviews (
  created_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE rewards DROP CONSTRAINT IF EXISTS rewards_amount_check;
-ALTER TABLE rewards ADD CONSTRAINT rewards_amount_check CHECK (amount IN (0, 50));
+ALTER TABLE rewards ADD CONSTRAINT rewards_amount_check CHECK (amount BETWEEN 0 AND 1000);

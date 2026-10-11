@@ -33,6 +33,9 @@ export const challenges = pgTable("challenges", {
   title: text("title").notNull(),
   description: text("description").notNull(),
   category: text("category").notNull(),
+  points: integer("points").notNull().default(50),
+  fontFamily: text("font_family").notNull().default("default"),
+  fontSize: text("font_size").notNull().default("default"),
   requirements: jsonb("requirements").$type<string[]>().notNull(),
   deadline: time("deadline"),
   status: text("status").notNull().default("published"),
@@ -50,6 +53,7 @@ export const contributions = pgTable(
       .notNull()
       .references(() => challenges.id),
     latestVersion: integer("latest_version").notNull().default(0),
+    rewardPoints: integer("reward_points").notNull().default(50),
     outcome: text("outcome"),
     consent: boolean("consent").notNull().default(false),
     consentAt: time("consent_at"),

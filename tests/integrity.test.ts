@@ -603,3 +603,64 @@ test("creator review protects ownership, immutable versions and one-time rewards
     /Evidence changed/,
   );
 });
+test("variable rewards preserve accepted points through edits, denial and revision", async () => {
+  const c = await challenge("Variable reward");
+  await service.updateChallengeSettings(creator, c.id, {
+    points: 125,
+    fontFamily: "serif",
+    fontSize: "large",
+  });
+  await assert.rejects(
+    service.updateChallengeSettings(bob, c.id, {
+      points: 999,
+      fontFamily: "sans",
+      fontSize: "small",
+    }),
+    /not owned/,
+  );
+  for (const points of [0, 1001, 1.5])
+    await assert.rejects(
+      service.updateChallengeSettings(creator, c.id, {
+        points,
+        fontFamily: "default",
+        fontSize: "default",
+      }),
+    );
+  const first = await contribute(c.id, "supported");
+  await service.updateChallengeSettings(creator, c.id, {
+    points: 250,
+    fontFamily: "sans",
+    fontSize: "small",
+  });
+  const assessed = await service.processAssessment(alice, first.id);
+  assert.equal(assessed.points, 125);
+  assert.equal(assessed.contribution.rewardPoints, 125);
+  const denied = await service.reviewContribution(creator, first.id, {
+    evidenceId: assessed.evidence.id,
+    decision: "deny",
+    reason: "Please revise the photo",
+  });
+  assert.equal(denied.points, 0);
+  const revised = await contribute(c.id, "supported");
+  assert.equal(
+    (await service.processAssessment(alice, revised.id)).points,
+    125,
+  );
+  const next = await contribute(c.id, "not_supported", bob);
+  const feedback = await service.processAssessment(bob, next.id);
+  const approved = await service.reviewContribution(creator, next.id, {
+    evidenceId: feedback.evidence.id,
+    decision: "approve",
+    reason: "The mission is satisfied",
+  });
+  assert.equal(approved.points, 250);
+  assert.equal((await service.processAssessment(bob, next.id)).points, 250);
+  assert.equal((await service.challengeDetail(c.id)).fontFamily, "sans");
+  assert.equal(
+    (await service.discover()).find((row) => row.id === c.id)?.points,
+    250,
+  );
+  // Re-running all local migrations must tolerate existing variable awards.
+  await closeDb();
+  assert.equal((await service.contributionDetail(bob, next.id)).points, 250);
+});

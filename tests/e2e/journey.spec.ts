@@ -197,16 +197,37 @@ test("creator reviews insufficient evidence and text size persists", async ({
     page.getByText("20 / 2,000 characters", { exact: true }),
   ).toBeVisible();
   await page.getByLabel("Evidence requirements").fill("Show the planted tree.");
+  await page.getByLabel("Participation points", { exact: true }).fill("125");
   await page.getByRole("button", { name: "Publish challenge" }).click();
   await expect(
     page.getByRole("heading", { name: "Review submissions" }),
   ).toBeVisible();
   const challengePath = new URL(page.url()).pathname;
+  await page.getByLabel("Challenge points", { exact: true }).fill("200");
+  await page
+    .getByLabel("Challenge font", { exact: true })
+    .selectOption("serif");
+  await page
+    .getByLabel("Challenge text size", { exact: true })
+    .selectOption("large");
+  await page.getByRole("button", { name: "Save challenge settings" }).click();
+  await expect(page.locator(".reward")).toHaveText("200 points");
+  await page.reload();
+  await expect(page.locator(".challenge-appearance")).toHaveAttribute(
+    "data-font",
+    "serif",
+  );
+  await expect(
+    page.getByLabel("Challenge text size", { exact: true }),
+  ).toHaveValue("large");
   await expect(
     page.getByRole("link", { name: "Take this challenge" }),
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await signIn(creator + " member", challengePath);
+  await expect(
+    page.getByRole("button", { name: "Save challenge settings" }),
+  ).toHaveCount(0);
   await page.getByRole("link", { name: "Take this challenge" }).click();
   await page.getByLabel("Result photo (required)").setInputFiles({
     name: "tree.png",
@@ -231,6 +252,9 @@ test("creator reviews insufficient evidence and text size persists", async ({
   const assessmentPath = new URL(page.url()).pathname;
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await signIn(creator, challengePath);
+  await page.getByLabel("Challenge points", { exact: true }).fill("250");
+  await page.getByRole("button", { name: "Save challenge settings" }).click();
+  await expect(page.locator(".reward")).toHaveText("250 points");
   await expect(
     page.getByText("Gemini: needs more evidence", { exact: true }),
   ).toBeVisible();
@@ -244,9 +268,11 @@ test("creator reviews insufficient evidence and text size persists", async ({
   await expect(
     page.getByText("Approved by creator", { exact: true }),
   ).toBeVisible();
-  await page.getByLabel("Text size").selectOption("large");
+  await page.getByLabel("Text size", { exact: true }).selectOption("large");
   await page.reload();
-  await expect(page.getByLabel("Text size")).toHaveValue("large");
+  await expect(page.getByLabel("Text size", { exact: true })).toHaveValue(
+    "large",
+  );
   expect(
     await page.evaluate(
       () => getComputedStyle(document.documentElement).fontSize,
@@ -258,20 +284,36 @@ test("creator reviews insufficient evidence and text size persists", async ({
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 900 });
+  await page.screenshot({
+    path: "test-results/screenshots/creator-settings-mobile.png",
+    fullPage: true,
+  });
+  const overflowElements = await page.evaluate(() =>
+    Array.from(document.querySelectorAll("main *"))
+      .filter((el) => el.getBoundingClientRect().right > innerWidth)
+      .map((el) => ({
+        tag: el.tagName,
+        cls: el.className,
+        text: el.textContent?.slice(0, 70),
+        right: el.getBoundingClientRect().right,
+      }))
+      .slice(0, 12),
+  );
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth > innerWidth,
     ),
+    JSON.stringify(overflowElements),
   ).toBe(false);
-  await page.getByLabel("Text size").selectOption("default");
+  await page.getByLabel("Text size", { exact: true }).selectOption("default");
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await signIn(creator + " member", assessmentPath);
   await expect(
     page.getByText("Creator approved this submission", { exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".reward")).toHaveText("+50");
+  await expect(page.locator(".reward")).toHaveText("+200");
   await page.reload();
-  await expect(page.locator(".reward")).toHaveText("+50");
+  await expect(page.locator(".reward")).toHaveText("+200");
 });
 test("mobile and desktop Discover: responsive layout, filtering and per-record navigation", async ({
   page,
